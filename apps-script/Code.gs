@@ -27,12 +27,13 @@ const EFFORT_DEFAULT = 'low';
 const BANNED = ['섹스', '야동', '자살', '자해', '살인', '마약', '시발', '씨발', '병신', '좆', '존나', '개새끼', '느금', '니애미', '애미', '애비', '일베', '나치'];
 
 const MOODS = ['동화 그림책처럼 포근하게', '꽃과 잎 장식이 어우러진 감성적인 느낌으로', '귀엽고 둥글둥글하게', '깔끔한 아이콘처럼 정돈되게'];
-const LAYOUT_NAME = { below: '그림+아래문구', calli: '문구중심', grid: '원고지', arc: '둥근문구' };
+const LAYOUT_NAME = { below: '그림+아래문구', calli: '문구중심', grid: '원고지', arc: '둥근문구', wreath: '리스' };
 const PHRASE_RULE = {
   below: '띄어쓰기 포함 10자 이내',
   calli: '띄어쓰기 포함 16자 이내, 두세 줄로 나눌 곳에 / 를 넣는다',
   grid: '띄어쓰기를 뺀 글자 수로 14~20자, 한 칸에 한 글자씩 세로로 들어가니 시처럼 짧은 다짐 문장',
-  arc: '띄어쓰기 포함 12자 이내'
+  arc: '띄어쓰기 포함 12자 이내',
+  wreath: '띄어쓰기 포함 14자 이내, 두세 줄로 나눌 곳에 / 를 넣는다'
 };
 
 const SYSTEM = [
@@ -111,7 +112,7 @@ function handle_(req) {
     phrase: clean_(req.phrase, 24),
     mood: MOODS.indexOf(req.mood) >= 0 ? req.mood : MOODS[0],
     level: req.level === 'normal' ? 'normal' : 'easy',
-    layout: ['below', 'calli', 'grid', 'arc', 'auto'].indexOf(req.layout) >= 0 ? req.layout : 'below',
+    layout: ['below', 'calli', 'grid', 'arc', 'wreath', 'auto'].indexOf(req.layout) >= 0 ? req.layout : 'below',
     fine: !!req.fine && cfg.allowFine
   };
   if (!f.dream) return { ok: false, error: 'bad_request' };
@@ -167,7 +168,7 @@ function clean_(v, max) {
 }
 function cleanSpecs_(specs, layout) {
   if (!Array.isArray(specs)) return null;
-  const want = layout === 'auto' ? ['below', 'calli', 'grid', 'arc'] : [layout];
+  const want = layout === 'auto' ? ['below', 'calli', 'grid', 'arc', 'wreath'] : [layout];
   const out = [];
   for (let i = 0; i < want.length; i++) {
     const s = specs.filter(function (x) { return x && x.layout === want[i]; })[0];
@@ -179,6 +180,11 @@ function cleanSpecs_(specs, layout) {
       const z = (s.zone || []).map(function (n) { return Math.round(Number(n)); });
       if (z.length !== 4 || z.some(function (n) { return !(n >= 0 && n <= 1200); }) || z[0] >= z[2] || z[1] >= z[3]) return null;
       o.zone = z;
+    }
+    if (want[i] === 'wreath') {
+      const c = (s.zone || []).map(function (n) { return Math.round(Number(n)); });
+      if (c.length !== 3 || c.some(function (n) { return !(n >= 0 && n <= 1200); }) || c[2] < 20) return null;
+      o.zone = c;
     }
     out.push(o);
   }
@@ -238,6 +244,10 @@ function guide_(s) {
     '주인공의 위쪽 끝에 꽃다발을 얹는다: 크기가 다른 꽃 3~4송이(큰 꽃 1송이, 중간 1~2송이, 작은 봉오리 1송이, 꽃잎 5장 외곽선과 가운데 점)와 잎 4~6장, 짧은 줄기 2~3개가 서로 겹쳐 하나의 덩어리를 이루게 한다. ' +
     '꽃다발은 주인공 폭의 절반 이상 크기로 주인공 외곽선에 직접 얹힌다. 주인공의 아래쪽 끝에도 작은 잎 2~3장을 붙여 위아래 균형을 맞춘다. ' +
     '나머지 여백에는 크기가 다른 다섯 꼭지 별 4~6개, 십자 반짝임 3~5개, 작은 점을 흩뿌려 밤하늘처럼 채운다.';
+  if (s.layout === 'wreath') return '꽃과 잎으로 엮은 둥근 리스(화관) 도안이다. 가운데 원(중심 x ' + s.zone[0] + ', y ' + s.zone[1] + ', 반지름 ' + s.zone[2] + ') 안에는 문구가 들어가므로 아무것도 그리지 않는다. ' +
+    '그 원 바깥을 따라 반지름 ' + (s.zone[2] + 8) + '~' + (s.zone[2] + 48) + ' 사이에 화관을 그린다: 원을 따라 휘어진 가는 덩굴 줄기 2~3개가 서로 엇갈리며 돌고, 줄기를 따라 크기가 다른 잎 16~26장이 바깥쪽과 안쪽으로 번갈아 붙는다. ' +
+    '꽃 3~5송이(크기 다르게)는 왼쪽 위와 오른쪽 아래처럼 비대칭으로 몰아 두고, 작은 봉오리와 열매 점을 사이사이에 넣는다. 화관 아래쪽은 완전히 닫지 말고 리본 매듭이나 짧은 틈을 둔다. ' +
+    '진로 상징이 있으면 화관 위쪽에 작게 하나 끼워 넣는다. 화관 바깥 네 귀퉁이에는 작은 반짝임 몇 개만 둔다.';
   return '둥근 배지 가운데에 들어갈 그림이다. 위쪽에는 문구가 원을 따라 휘어져 들어가고 바깥 원은 앱이 그린다. ' +
     '주인공 상징을 가운데에 두고, 아래쪽 반원을 따라 잎과 꽃이 이어진 화관(월계수처럼)을 그려 주인공을 받친다. 위쪽 빈 곳에는 작은 별과 반짝임을 둔다. 그림 전체가 동그란 실루엣이 되게 하고 네 귀퉁이는 비운다.';
 }
@@ -270,6 +280,11 @@ function buildAsk_(f, specs) {
     '- 요소 개수(점 제외): ' + (easy ? '20~35개. 하나하나는 단순한 모양으로 그려 중학생이 철필로 35분 안에 따라 새길 수 있게' : '35~60개. 그래도 철필로 45분 안에 새길 수 있게') + '.\n' +
     '- 선끼리 너무 촘촘하게 붙지 않게(간격 6 이상) 하고, 가장자리에서 8 이상 띄운다. 사실적인 음영과 잔선은 피한다.\n' +
     '- 상징을 알아볼 수 있게 형태를 또렷하게 그린다. 꽃은 꽃잎 외곽선과 가운데 점, 잎은 외곽선과 잎맥 한 줄 정도로.\n\n' +
+    '[선 스타일: 크로키]\n' +
+    '- 펜으로 가볍게 그린 크로키처럼 자유롭고 부드러운 곡선으로 그린다. path의 C, Q 곡선을 주로 쓰고, line, rect, polygon 같은 딱딱한 도형은 꼭 필요할 때만 쓴다.\n' +
+    '- 자를 대고 그은 듯한 직선, 컴퍼스로 그린 듯한 완벽한 원, 정확한 좌우 대칭은 피한다. 손으로 그린 듯 약간 흔들리고 기울어진 형태가 좋다.\n' +
+    '- 꽃잎, 잎, 줄기, 덩굴은 끊기지 않고 꼬불꼬불 이어지는 한 붓 선으로 그린다. 선 끝은 닫지 않고 살짝 열어 두어도 된다.\n' +
+    '- 별은 정확한 다섯 꼭지 별보다 손으로 그린 듯한 작은 별과 십자 반짝임을 섞는다.\n\n' +
     '[풍성하게 만드는 구도 규칙]\n' +
     '- 크기에 위계를 둔다: 주인공 1개는 크게, 보조 상징 1~2개는 주인공의 1/3쯤, 나머지 장식은 작게. 비슷한 크기의 물건을 고르게 흩어 놓지 않는다.\n' +
     '- 장식은 흩뿌리지 말고 묶음으로 모은다. 묶음 하나는 꽃 1~3송이, 잎 2~4장, 작은 별·반짝임 2~3개가 서로 닿거나 살짝 겹쳐 한 덩어리로 보이게 한다. 묶음은 구성 설명에 적힌 자리에 2~3개 둔다.\n' +
@@ -278,7 +293,7 @@ function buildAsk_(f, specs) {
     '- 의미 없는 짧은 곡선, 낙서 같은 선, 상징 안쪽을 채우는 줄무늬는 넣지 않는다. 모든 선은 무엇인지 알아볼 수 있는 모양(꽃, 잎, 줄기, 별, 반짝임, 상징)의 일부여야 한다.\n' +
     '- 같은 장식을 똑같이 반복하지 말고 꽃 모양·별 모양을 2가지 이상 섞는다.\n\n' +
     '[출력 형식] 아래 형식 그대로, 다른 말 없이 한국어로:\n' +
-    (auto ? '구성: (그림+아래문구, 문구중심, 원고지, 둥근문구 중 하나)\n' : '') +
+    (auto ? '구성: (그림+아래문구, 문구중심, 원고지, 둥근문구, 리스 중 하나)\n' : '') +
     '제목: (도안 이름, 12자 이내)\n' +
     (f.phrase ? '' : '문구: (' + phraseRule + ')\n') +
     '상징: (상징 이름) - (학생의 진로·키워드와 연결한 의미 한 문장)\n' +

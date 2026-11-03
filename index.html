@@ -63,8 +63,8 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
 .seg input:focus-visible+label,.layouts input:focus-visible+label{outline:2px solid var(--accent);outline-offset:1px}
 
 /* 구성 고르기 */
-.layouts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-@media (max-width:400px){.layouts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.layouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+
 .layouts label{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);cursor:pointer;font-weight:500;font-size:.74rem;text-align:center;line-height:1.25}
 .layouts svg{width:100%;max-width:44px;height:auto;color:var(--muted)}
 .layouts input:checked+label{background:var(--accent-soft);border-color:var(--accent)}
@@ -193,6 +193,8 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
           <label for="ly-grid"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M10 13a8 8 0 1 0 6 13a7 7 0 1 1-6-13z"/><path d="M24 7h10v26H24zM29 7v26M24 13.5h10M24 20h10M24 26.5h10" stroke-width="1.2"/></svg>그림 +<br>원고지 칸</label>
           <input type="radio" name="layout" id="ly-arc" value="arc">
           <label for="ly-arc"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M8 20a12 12 0 0 1 24 0" stroke-width="2.4" stroke-dasharray="3 2"/><circle cx="20" cy="24" r="6"/></svg>둥근 문구<br>배지</label>
+          <input type="radio" name="layout" id="ly-wreath" value="wreath">
+          <label for="ly-wreath"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M12 28a11 11 0 1 1 16 0" stroke-width="1.6"/><path d="M10 16q3-1 4 2M10 24q3 0 3 3M30 16q-3-1-4 2M30 24q-3 0-3 3M18 9q2 2 4 0" stroke-width="1.4"/><path d="M15 19h10M16 23h8" stroke-width="2.2"/></svg>리스<br>꽃 화관</label>
           <input type="radio" name="layout" id="ly-auto" value="auto">
           <label for="ly-auto"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M20 9l2.6 7.4L30 19l-7.4 2.6L20 29l-2.6-7.4L10 19l7.4-2.6z"/></svg>AI가<br>골라 줘</label>
         </div>
@@ -277,8 +279,8 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
               <label class="toggle"><input type="checkbox" id="outline"> 글자 테두리만</label>
               <label class="toggle" for="stroke">선 굵기
                 <select id="stroke" style="width:auto;padding:3px 6px">
-                  <option value="0.6">가늘게</option>
-                  <option value="0.9" selected>보통</option>
+                  <option value="0.6" selected>가늘게</option>
+                  <option value="0.9">보통</option>
                   <option value="1.3">굵게</option>
                 </select>
               </label>
@@ -340,13 +342,14 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyVDLaOdRZ2vYtiy25OAPU4
 /* ====================== */
 const NS = "http://www.w3.org/2000/svg";
 const $ = id => document.getElementById(id);
-const LAYOUT_NAME = { below: "그림+아래문구", calli: "문구중심", grid: "원고지", arc: "둥근문구" };
+const LAYOUT_NAME = { below: "그림+아래문구", calli: "문구중심", grid: "원고지", arc: "둥근문구", wreath: "리스" };
 const NAME_LAYOUT = Object.fromEntries(Object.entries(LAYOUT_NAME).map(([k, v]) => [v, k]));
 const LAYOUT_HINT = {
   below: "그림을 크게 그리고 아래에 문구를 넣어요.",
   calli: "문구를 크게 쓰고, 그림은 꽃·별 같은 장식으로 둘러요.",
   grid: "그림 옆에 원고지 칸을 그리고 한 칸에 한 글자씩 세로로 넣어요. 띄어쓰기는 빼고 채워요. 20자 안팎이 예뻐요.",
   arc: "가운데 그림 위로 문구가 둥글게 휘어 들어가요.",
+  wreath: "잎과 꽃이 이어진 둥근 화관 가운데에 문구를 넣어요.",
   auto: "키워드에 어울리는 구성을 AI가 골라요."
 };
 
@@ -385,7 +388,7 @@ const EXAMPLE = {
   example: true
 };
 
-const state = { design: null, led: "#ffc46b", on: true, mirror: false, outline: false, strokeMM: 0.9, history: [], current: -1 };
+const state = { design: null, led: "#ffc46b", on: true, mirror: false, outline: false, strokeMM: 0.6, history: [], current: -1 };
 
 /* ---------- SVG 정리(허용된 도형만) ---------- */
 const ALLOWED = { path:["d"], circle:["cx","cy","r"], ellipse:["cx","cy","rx","ry"], line:["x1","y1","x2","y2"],
@@ -483,6 +486,14 @@ function geom(layout, phrase, sub, font, forRequest = false) {
     const mainH = sub ? G.zone.h * .8 : G.zone.h;
     if (lines.length) mainS = pushLines(lines, { x: G.zone.x, y: G.zone.y, w: G.zone.w, h: mainH }, font);
     if (sub) pushLines([sub], { x: G.zone.x + G.zone.w * .12, y: G.zone.y + mainH + 2, w: G.zone.w * .76, h: G.zone.h - mainH }, subFont, subMax());
+  } else if (layout === "wreath") {
+    G.art = { x: m * .6, y: m * .6, w: w - 1.2 * m, h: h - 1.2 * m };
+    const cx = w / 2, cy = h / 2, r = Math.min(w, h) * .28;
+    G.ring = { cx, cy, r };
+    const lines = splitLines(phrase, 3);
+    const box = { x: cx - r * .86, y: cy - r * .66, w: r * 1.72, h: sub ? r * 1.0 : r * 1.32 };
+    if (lines.length) mainS = pushLines(lines, box, font);
+    if (sub) pushLines([sub], { x: cx - r * .66, y: box.y + box.h + 1.5, w: r * 1.32, h: r * .34 }, subFont, subMax());
   } else if (layout === "grid") {
     // 도안용 원고지: 띄어쓰기는 칸을 비우지 않고 빼서 줄마다 칸을 꽉 채움 (레퍼런스처럼 2줄 안팎)
     const cells = phrase ? gridChars(phrase).filter(ch => ch !== " ") : Array(14).fill("가");
@@ -628,6 +639,10 @@ function specFor(layout) {
   const G = geom(layout, curPhrase(), curSub(), curFont(), true);
   const vw = 300, vh = Math.round(300 * G.art.h / G.art.w);
   const o = { layout, vw, vh };
+  if (layout === "wreath") {
+    const sx = vw / G.art.w, c = G.ring;
+    o.zone = [Math.round((c.cx - G.art.x) * sx), Math.round((c.cy - G.art.y) * sx), Math.round(c.r * sx)];
+  }
   if (layout === "calli") {
     const sx = vw / G.art.w, z = G.zone;
     o.zone = [Math.round((z.x - G.art.x) * sx), Math.round((z.y - G.art.y) * sx), Math.round((z.x + z.w - G.art.x) * sx), Math.round((z.y + z.h - G.art.y) * sx)];
@@ -643,7 +658,7 @@ function buildPayload() {
     mood: document.querySelector('input[name=mood]:checked').value,
     level: document.querySelector('input[name=level]:checked').value,
     fine: $("fine").checked,
-    specs: (l === "auto" ? ["below", "calli", "grid", "arc"] : [l]).map(specFor)
+    specs: (l === "auto" ? ["below", "calli", "grid", "arc", "wreath"] : [l]).map(specFor)
   };
 }
 
