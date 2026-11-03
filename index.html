@@ -345,7 +345,7 @@ const NAME_LAYOUT = Object.fromEntries(Object.entries(LAYOUT_NAME).map(([k, v]) 
 const LAYOUT_HINT = {
   below: "그림을 크게 그리고 아래에 문구를 넣어요.",
   calli: "문구를 크게 쓰고, 그림은 꽃·별 같은 장식으로 둘러요.",
-  grid: "그림 옆에 원고지 칸을 그리고 한 칸에 한 글자씩 넣어요. 띄어쓰기 포함 21자까지.",
+  grid: "그림 옆에 원고지 칸을 그리고 한 칸에 한 글자씩 세로로 넣어요. 띄어쓰기는 빼고 채워요. 20자 안팎이 예뻐요.",
   arc: "가운데 그림 위로 문구가 둥글게 휘어 들어가요.",
   auto: "키워드에 어울리는 구성을 AI가 골라요."
 };
@@ -453,7 +453,7 @@ function fitSize(lines, boxW, boxH, font, lh = 1.12) {
   const maxW = Math.max(...lines.map(l => textW(l, font)));
   return Math.min(boxW / Math.max(maxW, .1), boxH / (lines.length * lh));
 }
-function gridChars(phrase) { return phrase.replace(/\//g, " ").replace(/\s+/g, " ").trim().slice(0, 21).split(""); }
+function gridChars(phrase) { return phrase.replace(/\//g, " ").replace(/\s+/g, " ").trim().slice(0, 36).split(""); }
 
 /* ---------- 구성별 배치 계산 (단위 mm) ---------- */
 // art: 그림이 들어갈 영역, zone: (문구중심) 그림을 비워 둘 영역, texts: 글자 조각, shapes: 앱이 그리는 칸·테두리
@@ -484,11 +484,12 @@ function geom(layout, phrase, sub, font, forRequest = false) {
     if (lines.length) mainS = pushLines(lines, { x: G.zone.x, y: G.zone.y, w: G.zone.w, h: mainH }, font);
     if (sub) pushLines([sub], { x: G.zone.x + G.zone.w * .12, y: G.zone.y + mainH + 2, w: G.zone.w * .76, h: G.zone.h - mainH }, subFont, subMax());
   } else if (layout === "grid") {
-    const chars = phrase ? gridChars(phrase) : Array(14).fill("가");
-    const R = h >= w ? (chars.length > 14 ? 8 : 7) : 5;
-    const cells = []; // 원고지 규칙: 줄(세로 칸)이 띄어쓰기로 시작하면 그 칸은 비우지 않고 건너뜀
-    chars.forEach(ch => { if (ch === " " && cells.length % R === 0) return; cells.push(ch); });
-    const cols = Math.max(1, Math.min(4, Math.ceil(cells.length / R)));
+    // 도안용 원고지: 띄어쓰기는 칸을 비우지 않고 빼서 줄마다 칸을 꽉 채움 (레퍼런스처럼 2줄 안팎)
+    const cells = phrase ? gridChars(phrase).filter(ch => ch !== " ") : Array(14).fill("가");
+    const n = Math.max(cells.length, 1), tall = h >= w;
+    let cols = n <= 9 ? 1 : n <= 20 ? 2 : 3;
+    let R = Math.max(tall ? 6 : 4, Math.min(tall ? 10 : 6, Math.ceil(n / cols)));
+    cols = Math.max(1, Math.min(4, Math.ceil(n / R)));
     const c = Math.min((h - 2 * m) / R, (w * .4) / cols);
     const gw = cols * c, gh = R * c, gx = w - m - gw, gy = (h - gh) / 2;
     G.art = { x: m, y: m, w: gx - m - 3, h: h - 2 * m };
