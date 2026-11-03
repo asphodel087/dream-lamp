@@ -10,6 +10,10 @@
  * 설치 순서는 README.md 를 보세요.
  */
 
+// 기록용 구글 시트 ID (시트 주소의 /d/ 와 /edit 사이 글자).
+// 시트의 '확장 프로그램 → Apps Script'로 만든 경우에는 비워 둬도 됩니다.
+const SHEET_ID = '';
+
 const MODELS = { quick: 'claude-haiku-5-5', fine: 'claude-sonnet-5-5' };
 // 100만 토큰당 달러 (2026년 11월 요금표 기준, 예상 비용 계산용)
 const PRICE = { 'claude-haiku-5-5': { in: 0.10, out: 0.50 }, 'claude-sonnet-5-5': { in: 2, out: 10 } };
@@ -36,9 +40,15 @@ const SYSTEM = [
   '문구와 설명은 학생을 존중하고 응원하는 따뜻한 말투로 쓴다.'
 ].join('\n');
 
+function book_() {
+  const ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActive();
+  if (!ss) throw new Error('기록용 시트를 찾지 못했어요. 코드 위쪽 SHEET_ID에 시트 ID를 넣어 주세요.');
+  return ss;
+}
+
 /* ---------------- 처음 한 번 실행 ---------------- */
 function setup() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = book_();
   let s = ss.getSheetByName('설정');
   if (!s) {
     s = ss.insertSheet('설정');
@@ -132,7 +142,7 @@ function handle_(req) {
 }
 
 function settings_() {
-  const s = SpreadsheetApp.getActive().getSheetByName('설정');
+  const s = book_().getSheetByName('설정');
   if (!s) throw new Error('설정 시트가 없어요. setup 을 먼저 실행하세요.');
   const map = {};
   s.getRange(2, 1, Math.max(s.getLastRow() - 1, 1), 2).getValues().forEach(function (r) { map[String(r[0]).trim()] = r[1]; });
@@ -181,7 +191,7 @@ function cleanupCounters_(todayKey) {
 
 function log_(code, result, f, model, usage) {
   try {
-    const sh = SpreadsheetApp.getActive().getSheetByName('기록');
+    const sh = book_().getSheetByName('기록');
     const u = usage || {}, p = PRICE[model];
     const cost = p && usage ? ((u.input_tokens || 0) * p.in + (u.output_tokens || 0) * p.out) / 1e6 : '';
     sh.appendRow([new Date(), code, result, model ? (model.indexOf('haiku') >= 0 ? 'Haiku' : 'Sonnet') : '', LAYOUT_NAME[f.layout] || 'AI 선택',

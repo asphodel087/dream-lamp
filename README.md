@@ -38,6 +38,7 @@ Claude API (기본 Haiku 5.5, "더 정교하게" 체크 시 Sonnet 5.5)
 1. [Google 스프레드시트](https://sheets.new)를 새로 만들고 이름을 `무드등 도안 기록`으로 정합니다.
 2. 메뉴 **확장 프로그램 → Apps Script**를 엽니다.
 3. 기본으로 있는 `Code.gs` 내용을 모두 지우고, 이 저장소의 `apps-script/Code.gs` 내용을 붙여넣은 뒤 저장(💾)합니다.
+   - 시트 메뉴가 아닌 script.google.com에서 따로 만든 프로젝트라면, 코드 위쪽 `SHEET_ID`에 시트 ID(시트 주소의 `/d/`와 `/edit` 사이)를 넣어 주세요.
 4. 왼쪽 **⚙️ 프로젝트 설정 → 스크립트 속성 → 스크립트 속성 추가**로 아래를 넣고 저장합니다.
    - 속성: `ANTHROPIC_API_KEY`
    - 값: 1단계에서 복사한 키
