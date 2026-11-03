@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="진로 키워드로 아크릴 무드등 철필 각인 도안을 만드는 수업용 웹앱">
+<title>꿈빛 도안 공방</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Nanum+Pen+Script&family=Nanum+Brush+Script&family=Gaegu:wght@700&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: 왼쪽 입력 패널 + 오른쪽 작업대(무드등 미리보기 · 철필용 실제 크기 도안). 좁은 화면에서는 위아래로 쌓임. */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --surface-2:#f6f8fb; --line:#d6dce6;
+  --fg:#18202d; --muted:#5b6676; --accent:#b8690c; --accent-fg:#ffffff; --accent-soft:#fbeed9;
+  --danger:#b3261e; --danger-soft:#fdeceb;
+  --stage:#0b0f17; --stage-2:#151b27; --stage-line:#2a3344; --stage-fg:#cfd6e2;
+  --paper:#ffffff;
+  --f-display:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f131a; --surface:#171c25; --surface-2:#1d2330; --line:#2c3443;
+  --fg:#e7ebf1; --muted:#9aa5b5; --accent:#f2b04a; --accent-fg:#1a1205; --accent-soft:#33270f;
+  --danger:#ff8a80; --danger-soft:#3a1d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f131a; --surface:#171c25; --surface-2:#1d2330; --line:#2c3443;
+  --fg:#e7ebf1; --muted:#9aa5b5; --accent:#f2b04a; --accent-fg:#1a1205; --accent-soft:#33270f;
+  --danger:#ff8a80; --danger-soft:#3a1d1b; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+h1{font-family:var(--f-display);font-weight:400;font-size:2.1rem;line-height:1.15;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 .glow{color:var(--accent)}
+.lede{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.steps{display:flex;gap:6px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.steps span{padding:3px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface)}
+.steps b{color:var(--accent);font-weight:600;margin-right:4px}
+
+.grid{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:400;font-size:1.25rem;margin:0}
+.field{display:flex;flex-direction:column;gap:5px}
+label,.lbl{font-size:.85rem;font-weight:600}
+.hint{font-size:.78rem;color:var(--muted);font-weight:400}
+input[type=text],select{width:100%;font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg input,.layouts input{position:absolute;opacity:0;pointer-events:none}
+.seg label{font-weight:500;font-size:.85rem;padding:6px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--surface-2)}
+.seg input:checked+label{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.seg input:focus-visible+label,.layouts input:focus-visible+label{outline:2px solid var(--accent);outline-offset:1px}
+
+/* 구성 고르기 */
+.layouts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:400px){.layouts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.layouts label{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);cursor:pointer;font-weight:500;font-size:.74rem;text-align:center;line-height:1.25}
+.layouts svg{width:100%;max-width:44px;height:auto;color:var(--muted)}
+.layouts input:checked+label{background:var(--accent-soft);border-color:var(--accent)}
+.layouts input:checked+label svg{color:var(--accent)}
+
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:10px 14px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1rem;padding:12px 14px}
+.btn.small{font-size:.82rem;padding:6px 10px;font-weight:500}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>.btn.primary{flex:1}
+.notice{font-size:.82rem;border-radius:8px;padding:9px 11px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.notice.err{background:var(--danger-soft);border-color:transparent;color:var(--danger)}
+.status{font-size:.85rem;color:var(--muted);min-height:1.4em;font-variant-numeric:tabular-nums}
+.status.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+
+.bench{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;min-width:0;align-items:start}
+@media (max-width:1060px){.bench{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card-head h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:1.1rem}
+.tag{font-size:.72rem;letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--fg)}
+
+/* 무드등 스테이지: 불을 끈 방이라는 설정이라 두 테마 모두 어둡게 고정 */
+.stage{background:radial-gradient(120% 90% at 50% 100%,var(--stage-2),var(--stage) 70%);padding:28px 18px 22px;display:flex;flex-direction:column;align-items:center;position:relative}
+.plate{width:min(100%,380px);position:relative}
+.plate svg{display:block;width:100%;height:auto}
+.base{width:min(108%,410px);height:34px;margin-top:-2px;border-radius:6px 6px 10px 10px;background:linear-gradient(#c9a77d,#a9845a 60%,#8d6b45);box-shadow:0 10px 24px rgba(0,0,0,.55),inset 0 2px 0 rgba(255,255,255,.25);position:relative}
+.base::after{content:"";position:absolute;left:50%;top:-3px;transform:translateX(-50%);width:84%;height:5px;border-radius:3px;background:#2a2118}
+.base .switch{position:absolute;right:12px;top:11px;width:12px;height:12px;border-radius:50%;background:#3b2e22;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.stage.on .base .switch{background:var(--led,#ffc46b);box-shadow:0 0 8px var(--led,#ffc46b)}
+.stage-ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:18px}
+.swatch{width:26px;height:26px;border-radius:50%;border:2px solid var(--stage-line);cursor:pointer;padding:0}
+.swatch[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--stage)}
+.swatch:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.swatch.rainbow{background:conic-gradient(#ff6b6b,#ffd56b,#7dff8a,#6bd5ff,#a98bff,#ff6bd8,#ff6b6b)}
+.stage .btn{background:var(--stage-2);color:var(--stage-fg);border-color:var(--stage-line)}
+.stage .btn:hover{border-color:#ffc46b}
+.lit{color:var(--led,#ffc46b)}
+.lit.rainbow{animation:hue 6s linear infinite}
+@keyframes hue{0%{color:#ff6b6b}17%{color:#ffd56b}33%{color:#7dff8a}50%{color:#6bd5ff}67%{color:#a98bff}83%{color:#ff6bd8}100%{color:#ff6b6b}}
+@media (prefers-reduced-motion:reduce){.lit.rainbow{animation:none;color:#a98bff}.status.live::before{animation:none}}
+
+.paperwrap{padding:18px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;gap:10px}
+.paper{width:min(100%,360px);background:var(--paper);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 20px rgba(0,0,0,.08)}
+.paper svg{display:block;width:100%;height:auto}
+.dim{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.paper-ctrl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:.85rem;font-weight:500;cursor:pointer;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.toggle input{accent-color:var(--accent);width:16px;height:16px}
+
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.info .panel{gap:10px}
+.sym{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.sym li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:baseline}
+.sym b{font-family:var(--f-display);font-weight:400;font-size:1.05rem;color:var(--accent)}
+.sym span{min-width:0}
+.tip{border-left:3px solid var(--accent);padding:2px 0 2px 10px;color:var(--muted);font-size:.9rem;margin:0}
+.prompt-box{font-size:.85rem;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;user-select:all}
+.history{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.history button{flex:0 0 auto;width:84px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--stage);cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center}
+.history button[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.history button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.history svg{width:70px;height:auto;display:block}
+.history small{font-size:.7rem;color:var(--stage-fg);max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saveimg{max-width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+
+.codefield{background:var(--accent-soft);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.ai-badge{font-size:.78rem;color:var(--muted)}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  body{padding:0!important;background:#fff!important}
+  .wrap{display:none!important}
+  #printArea{display:block}
+  .pa-page{width:210mm;height:296mm;padding-top:12mm;display:flex;flex-direction:column;align-items:center;font-family:var(--f-body);color:#222}
+  .pa-title{font-size:15pt;font-weight:600}
+  .pa-sub{font-size:9.5pt;color:#555;margin:2mm 0 8mm}
+  .pa-plate svg{display:block}
+  .pa-ruler{display:flex;align-items:center;gap:3mm;font-size:8.5pt;margin-top:12mm;align-self:center}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>꿈빛 <span class="glow">도안</span> 공방</h1>
+      <p class="lede">꿈과 키워드를 적고 구성을 고르면 AI(Claude)가 아크릴 무드등에 철필로 새길 도안을 그려 줘요. 판 크기 그대로 저장해서 판 밑에 깔고 따라 새기면 됩니다.</p>
+    </div>
+    <div class="steps" aria-label="수업 흐름"><span><b>1</b>키워드 입력</span><span><b>2</b>구성 고르기</span><span><b>3</b>AI 도안 생성</span><span><b>4</b>실제 크기로 저장</span></div>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <h2>나의 키워드</h2>
+      <div class="field codefield">
+        <label for="classCode">수업 코드 <span class="hint">· 선생님이 칠판에 적어 준 코드</span></label>
+        <input type="text" id="classCode" maxlength="20" placeholder="예: 별빛31">
+      </div>
+      <div class="field">
+        <label for="dream">나의 꿈 · 관심 진로</label>
+        <input type="text" id="dream" maxlength="30" required placeholder="예: 천문학자, 수의사, 게임 개발자">
+      </div>
+      <div class="field">
+        <label for="words">나를 나타내는 키워드 <span class="hint">· 최대 3개, 쉼표로 구분</span></label>
+        <input type="text" id="words" maxlength="40" placeholder="예: 호기심, 탐구, 밤하늘">
+      </div>
+      <div class="field">
+        <label for="symbols">꼭 넣고 싶은 상징 <span class="hint">· 비워 두면 AI가 골라요</span></label>
+        <input type="text" id="symbols" maxlength="40" placeholder="예: 초승달, 별, 망원경">
+      </div>
+
+      <div class="field">
+        <span class="lbl" id="layoutLbl">도안 구성</span>
+        <div class="layouts" role="radiogroup" aria-labelledby="layoutLbl">
+          <input type="radio" name="layout" id="ly-below" value="below" checked>
+          <label for="ly-below"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M14 22a7 7 0 1 1 10-9a6 6 0 1 0-10 9z"/><path d="M11 31h18"/></svg>그림 +<br>아래 문구</label>
+          <input type="radio" name="layout" id="ly-calli" value="calli">
+          <label for="ly-calli"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><circle cx="9" cy="9" r="3"/><circle cx="31" cy="31" r="3"/><path d="M11 17h18M9 22h22M14 27h12" stroke-width="2.4"/></svg>문구 중심<br>캘리그라피</label>
+          <input type="radio" name="layout" id="ly-grid" value="grid">
+          <label for="ly-grid"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M10 13a8 8 0 1 0 6 13a7 7 0 1 1-6-13z"/><path d="M24 7h10v26H24zM29 7v26M24 13.5h10M24 20h10M24 26.5h10" stroke-width="1.2"/></svg>그림 +<br>원고지 칸</label>
+          <input type="radio" name="layout" id="ly-arc" value="arc">
+          <label for="ly-arc"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M8 20a12 12 0 0 1 24 0" stroke-width="2.4" stroke-dasharray="3 2"/><circle cx="20" cy="24" r="6"/></svg>둥근 문구<br>배지</label>
+          <input type="radio" name="layout" id="ly-auto" value="auto">
+          <label for="ly-auto"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M20 9l2.6 7.4L30 19l-7.4 2.6L20 29l-2.6-7.4L10 19l7.4-2.6z"/></svg>AI가<br>골라 줘</label>
+        </div>
+        <span class="hint" id="layoutHint"></span>
+      </div>
+
+      <div class="field">
+        <label for="phrase">새길 문구 <span class="hint">· 비워 두면 AI가 지어 줘요 · <b>/</b> 로 줄 나눔</span></label>
+        <input type="text" id="phrase" maxlength="24" placeholder="예: 별을 향해 / 한 걸음씩">
+      </div>
+      <div class="field">
+        <label for="sub">작은 글씨 <span class="hint">· 선택 · 이름·학교 등 개인정보는 넣지 마세요</span></label>
+        <input type="text" id="sub" maxlength="24" placeholder="예: 2026 가을, 나의 다짐">
+      </div>
+      <div class="field">
+        <span class="lbl" id="fontLbl">문구 글씨체</span>
+        <div class="seg" role="radiogroup" aria-labelledby="fontLbl">
+          <input type="radio" name="font" id="f1" value="Nanum Pen Script" checked><label for="f1" style="font-family:'Nanum Pen Script';font-size:1.05rem">손글씨</label>
+          <input type="radio" name="font" id="f4" value="Nanum Brush Script"><label for="f4" style="font-family:'Nanum Brush Script';font-size:1.05rem">붓글씨</label>
+          <input type="radio" name="font" id="f2" value="Gaegu"><label for="f2" style="font-family:'Gaegu';font-weight:700">동글동글</label>
+          <input type="radio" name="font" id="f3" value="Gowun Dodum"><label for="f3" style="font-family:'Gowun Dodum'">반듯하게</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="plate">아크릴 판 크기</label>
+        <select id="plate">
+          <option value="150x150">정사각 150 × 150 mm</option>
+          <option value="100x150">세로형 100 × 150 mm</option>
+          <option value="150x100">가로형 150 × 100 mm</option>
+          <option value="120x120">작은 정사각 120 × 120 mm</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="lbl" id="levelLbl">그림 난이도</span>
+        <div class="seg" role="radiogroup" aria-labelledby="levelLbl">
+          <input type="radio" name="level" id="l1" value="easy" checked><label for="l1">단순하게 (입문)</label>
+          <input type="radio" name="level" id="l2" value="normal"><label for="l2">조금 자세히</label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl" id="moodLbl">분위기</span>
+        <div class="seg" role="radiogroup" aria-labelledby="moodLbl">
+          <input type="radio" name="mood" id="m1" value="동화 그림책처럼 포근하게" checked><label for="m1">동화처럼</label>
+          <input type="radio" name="mood" id="m4" value="꽃과 잎 장식이 어우러진 감성적인 느낌으로"><label for="m4">꽃 장식</label>
+          <input type="radio" name="mood" id="m2" value="귀엽고 둥글둥글하게"><label for="m2">귀엽게</label>
+          <input type="radio" name="mood" id="m3" value="깔끔한 아이콘처럼 정돈되게"><label for="m3">깔끔하게</label>
+        </div>
+      </div>
+      <label class="toggle" style="align-self:flex-start"><input type="checkbox" id="fine"> 더 정교하게 그리기 <span class="hint">· 시간이 더 걸려요</span></label>
+      <div class="row">
+        <button type="submit" class="btn primary" id="go">도안 만들기</button>
+        <button type="button" class="btn" id="stop" hidden>멈추기</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <div class="notice" id="aiNote" hidden></div>
+    </form>
+
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <div class="bench">
+        <section class="card" aria-labelledby="pvTitle">
+          <div class="card-head"><h3 id="pvTitle">무드등 미리보기</h3><span class="tag" id="designTag">예시 도안</span></div>
+          <div class="stage on" id="stage">
+            <div class="plate" id="plateView"></div>
+            <div class="base" aria-hidden="true"><span class="switch"></span></div>
+            <div class="stage-ctrl" role="group" aria-label="LED 색">
+              <button type="button" class="swatch" data-led="#ffc46b" style="background:#ffc46b" aria-label="웜 화이트" aria-pressed="true"></button>
+              <button type="button" class="swatch" data-led="#f2f6ff" style="background:#f2f6ff" aria-label="쿨 화이트" aria-pressed="false"></button>
+              <button type="button" class="swatch" data-led="#7fd3ff" style="background:#7fd3ff" aria-label="하늘색" aria-pressed="false"></button>
+              <button type="button" class="swatch" data-led="#ff8fc8" style="background:#ff8fc8" aria-label="분홍색" aria-pressed="false"></button>
+              <button type="button" class="swatch rainbow" data-led="rainbow" aria-label="7색 변환" aria-pressed="false"></button>
+              <button type="button" class="btn small" id="power" aria-pressed="true">불 끄기</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="tpTitle">
+          <div class="card-head"><h3 id="tpTitle">철필용 도안</h3><span class="dim" id="dimLabel">150 × 150 mm</span></div>
+          <div class="paperwrap">
+            <div class="paper" id="paperView"></div>
+            <div class="paper-ctrl">
+              <label class="toggle"><input type="checkbox" id="mirror"> 좌우반전 (뒷면용)</label>
+              <label class="toggle"><input type="checkbox" id="outline"> 글자 테두리만</label>
+              <label class="toggle" for="stroke">선 굵기
+                <select id="stroke" style="width:auto;padding:3px 6px">
+                  <option value="0.6">가늘게</option>
+                  <option value="0.9" selected>보통</option>
+                  <option value="1.3">굵게</option>
+                </select>
+              </label>
+            </div>
+            <div class="row" style="justify-content:center">
+              <button type="button" class="btn small" id="printBtn">실제 크기로 인쇄</button>
+              <button type="button" class="btn small" id="savePdf">PDF 저장 (A4)</button>
+              <button type="button" class="btn small" id="savePng">PNG 저장</button>
+            </div>
+            <p class="hint" style="margin:0;text-align:center;max-width:42ch">A4 한 장에 판 크기 그대로 들어가요. 인쇄 창에서 배율을 <b>100% (실제 크기)</b>로, 여백을 <b>없음</b>으로 맞추세요.</p>
+            <div class="status" id="saveStatus" role="status" aria-live="polite"></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel" id="histPanel" hidden aria-labelledby="histTitle">
+        <h2 id="histTitle" style="font-size:1.05rem">이번 시간에 만든 도안 <span class="hint">· 눌러서 다시 보기</span></h2>
+        <div class="history" id="history"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="info">
+    <section class="panel" aria-labelledby="symTitle">
+      <h2 id="symTitle">도안 속 상징의 의미</h2>
+      <p style="margin:0;font-family:var(--f-display);font-size:1.15rem" id="dTitle"></p>
+      <ul class="sym" id="symList"></ul>
+      <p class="tip" id="tip"></p>
+    </section>
+    <section class="panel" aria-labelledby="engTitle">
+      <h2 id="engTitle">철필로 새기는 순서</h2>
+      <ol style="margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.92rem">
+        <li>도안을 인쇄해 아크릴 판 밑에 깔고 마스킹테이프로 고정해요.</li>
+        <li>새길 면의 보호필름을 떼요. 뒷면에 새길 거면 <b>좌우반전</b>으로 인쇄해요.</li>
+        <li>바깥 큰 선부터 가볍게 여러 번 긁어요. 한 번에 세게 누르면 미끄러져요.</li>
+        <li>글자는 획 가운데를 따라 긋거나, <b>글자 테두리만</b>으로 인쇄해서 안을 짧은 선으로 채워요.</li>
+        <li>가루는 붓이나 마른 천으로 털어요. 입으로 불지 않아요.</li>
+      </ol>
+    </section>
+    <section class="panel" aria-labelledby="pTitle">
+      <h2 id="pTitle">AI와 함께 만들어요</h2>
+      <ul style="margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:.92rem">
+        <li>이 도안은 <b>AI(Claude)</b>가 그려요. 사람이 그린 것이 아니에요.</li>
+        <li>이름, 학번, 학교, 연락처 같은 <b>개인정보는 입력하지 않아요.</b></li>
+        <li>마음에 안 들면 키워드를 바꿔 다시 그리고, 마지막에는 내 손으로 다듬어 완성해요.</li>
+        <li>AI가 지어 준 문구와 의미도 내 생각과 맞는지 꼭 읽어 보고 고쳐요.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+<div id="printArea" aria-hidden="true"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(() => {
+/* ===== 선생님 설정 =====
+   Apps Script 웹앱을 배포한 뒤 받은 주소(https://script.google.com/macros/s/.../exec)를 따옴표 안에 붙여넣으세요.
+   API 키는 절대 이 파일에 넣지 마세요. 키는 Apps Script '스크립트 속성'에만 둡니다. */
+const API_URL = "";
+/* ====================== */
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+const LAYOUT_NAME = { below: "그림+아래문구", calli: "문구중심", grid: "원고지", arc: "둥근문구" };
+const NAME_LAYOUT = Object.fromEntries(Object.entries(LAYOUT_NAME).map(([k, v]) => [v, k]));
+const LAYOUT_HINT = {
+  below: "그림을 크게 그리고 아래에 문구를 넣어요.",
+  calli: "문구를 크게 쓰고, 그림은 꽃·별 같은 장식으로 둘러요.",
+  grid: "그림 옆에 원고지 칸을 그리고 한 칸에 한 글자씩 넣어요. 띄어쓰기 포함 21자까지.",
+  arc: "가운데 그림 위로 문구가 둥글게 휘어 들어가요.",
+  auto: "키워드에 어울리는 구성을 AI가 골라요."
+};
+
+/* ---------- 예시 도안 (천문학자, 그림+아래 문구) ---------- */
+function starPts(cx, cy, R, r, rot = -90) {
+  const p = [];
+  for (let i = 0; i < 10; i++) {
+    const a = (rot + i * 36) * Math.PI / 180, rad = i % 2 ? r : R;
+    p.push((cx + rad * Math.cos(a)).toFixed(1) + "," + (cy + rad * Math.sin(a)).toFixed(1));
+  }
+  return p.join(" ");
+}
+function exampleSvg() {
+  const els = [
+    '<path d="M 128 34 A 76 76 0 1 0 176 166 A 62 62 0 0 1 128 34 Z"/>',
+    `<polygon points="${starPts(184, 56, 17, 7)}"/>`, `<polygon points="${starPts(226, 30, 9, 4)}"/>`, `<polygon points="${starPts(150, 108, 10, 4.2, -80)}"/>`,
+    '<polygon points="196,146 258,112 268,128 206,162"/>', '<polygon points="184,152 197,145 204,158 191,165"/>',
+    '<line x1="258" y1="112" x2="270" y2="106"/>', '<line x1="268" y1="128" x2="280" y2="122"/>', '<line x1="270" y1="106" x2="280" y2="122"/>',
+    '<line x1="232" y1="144" x2="212" y2="214"/>', '<line x1="232" y1="144" x2="254" y2="214"/>', '<line x1="232" y1="144" x2="233" y2="218"/>',
+    '<path d="M 40 196 Q 60 186 80 196 Q 100 206 120 196"/>'
+  ];
+  [[30,40],[262,70],[240,190],[20,150],[280,40],[110,212],[164,220],[90,28],[282,180],[200,22],[18,98],[270,212]]
+    .forEach(([x, y]) => els.push(`<circle cx="${x}" cy="${y}" r="2"/>`));
+  return `<svg xmlns="${NS}" viewBox="0 0 300 236">${els.join("")}</svg>`;
+}
+const EXAMPLE = {
+  title: "별을 쫓는 관측자", layout: "below",
+  symbols: [
+    { name: "초승달", meaning: "아직 다 차지 않은 달처럼 지금부터 채워 갈 나의 가능성" },
+    { name: "별", meaning: "멀리 있어도 계속 바라보는 목표, 천문학자가 연구하는 대상" },
+    { name: "망원경", meaning: "보이지 않던 것을 끝까지 들여다보는 호기심과 탐구심" }
+  ],
+  tip: "달의 바깥 곡선은 한 번에 긋기보다 짧게 끊어 이어 그리면 덜 미끄러져요.",
+  svg: exampleSvg(),
+  input: { dream: "천문학자", words: "호기심, 탐구, 밤하늘", symbols: "초승달, 별, 망원경", phrase: "별을 향해", sub: "" },
+  example: true
+};
+
+const state = { design: null, led: "#ffc46b", on: true, mirror: false, outline: false, strokeMM: 0.9, history: [], current: -1 };
+
+/* ---------- SVG 정리(허용된 도형만) ---------- */
+const ALLOWED = { path:["d"], circle:["cx","cy","r"], ellipse:["cx","cy","rx","ry"], line:["x1","y1","x2","y2"],
+  polyline:["points"], polygon:["points"], rect:["x","y","width","height","rx","ry"], g:[] };
+const NUM = /^-?\d*\.?\d+(e-?\d+)?$/i, PATHD = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s\-eE+]+$/, PTS = /^[0-9.,\s\-eE+]+$/;
+const TRANS = /^((translate|rotate|scale)\(\s*-?[\d.\s,eE+-]+\)\s*)+$/;
+function cleanNode(src) {
+  const tag = src.localName;
+  if (!ALLOWED[tag]) return null;
+  const el = document.createElementNS(NS, tag);
+  for (const a of ALLOWED[tag]) {
+    const v = src.getAttribute(a); if (v == null) continue;
+    const ok = a === "d" ? PATHD.test(v) : a === "points" ? PTS.test(v) : NUM.test(v.trim());
+    if (ok) el.setAttribute(a, v.trim());
+  }
+  const t = src.getAttribute("transform");
+  if (t && TRANS.test(t.trim())) el.setAttribute("transform", t.trim());
+  if (tag === "circle" && parseFloat(el.getAttribute("r")) <= 3.2) el.setAttribute("data-dot", "1");
+  if (tag === "g") for (const c of src.children) { const k = cleanNode(c); if (k) el.appendChild(k); }
+  if (tag !== "g" && el.attributes.length === 0) return null;
+  return el;
+}
+function parseSvg(str) {
+  const doc = new DOMParser().parseFromString(str, "image/svg+xml");
+  if (doc.querySelector("parsererror")) return null;
+  const root = doc.documentElement;
+  if (!root || root.localName !== "svg") return null;
+  let vb = (root.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some(n => !isFinite(n)) || vb[2] <= 0 || vb[3] <= 0) vb = [0, 0, 300, 300];
+  const g = document.createElementNS(NS, "g");
+  for (const c of root.children) { const k = cleanNode(c); if (k) g.appendChild(k); }
+  return { g, vb, count: g.querySelectorAll("*").length };
+}
+
+/* ---------- 글자 측정 ---------- */
+const mctx = document.createElement("canvas").getContext("2d");
+function fontCss(font, size) { return `${font === "Gaegu" ? "700 " : ""}${size}px '${font}', sans-serif`; }
+function textW(str, font) { mctx.font = fontCss(font, 100); return mctx.measureText(str).width / 100; }
+function curFont() { return document.querySelector('input[name=font]:checked').value; }
+function curPhrase() { return $("phrase").value.trim(); }
+function curSub() { return $("sub").value.trim(); }
+function plateSize() { const [w, h] = $("plate").value.split("x").map(Number); return { w, h }; }
+function splitLines(phrase, maxLines) {
+  if (!phrase) return [];
+  if (phrase.includes("/")) return phrase.split("/").map(s => s.trim()).filter(Boolean).slice(0, maxLines);
+  const n = phrase.replace(/\s/g, "").length;
+  const target = Math.min(maxLines, n <= 6 ? 1 : n <= 13 ? 2 : 3);
+  if (target === 1) return [phrase];
+  const words = phrase.split(/\s+/);
+  if (words.length < target) {           // 띄어쓰기 없이 길면 글자 수로 자름
+    const per = Math.ceil(phrase.length / target), out = [];
+    for (let i = 0; i < phrase.length; i += per) out.push(phrase.slice(i, i + per));
+    return out;
+  }
+  const per = phrase.length / target, out = []; let cur = "";
+  words.forEach(w => {
+    if (cur && (cur + " " + w).length > per * 1.15 && out.length < target - 1) { out.push(cur); cur = w; }
+    else cur = cur ? cur + " " + w : w;
+  });
+  if (cur) out.push(cur);
+  return out;
+}
+function fitSize(lines, boxW, boxH, font, lh = 1.12) {
+  if (!lines.length) return 0;
+  const maxW = Math.max(...lines.map(l => textW(l, font)));
+  return Math.min(boxW / Math.max(maxW, .1), boxH / (lines.length * lh));
+}
+function gridChars(phrase) { return phrase.replace(/\//g, " ").replace(/\s+/g, " ").trim().slice(0, 21).split(""); }
+
+/* ---------- 구성별 배치 계산 (단위 mm) ---------- */
+// art: 그림이 들어갈 영역, zone: (문구중심) 그림을 비워 둘 영역, texts: 글자 조각, shapes: 앱이 그리는 칸·테두리
+function geom(layout, phrase, sub, font, forRequest = false) {
+  const { w, h } = plateSize(), m = Math.max(8, Math.min(w, h) * 0.07);
+  const G = { w, h, m, art: null, zone: null, texts: [], shapes: [] };
+  const subH = sub ? Math.min(h * 0.075, 10) : 0;
+  const pushLines = (lines, box, fnt, align = "center") => {
+    const s = fitSize(lines, box.w, box.h, fnt); if (!s) return;
+    const lh = s * 1.12, total = lh * lines.length, top = box.y + (box.h - total) / 2;
+    lines.forEach((l, i) => G.texts.push({ t: l, x: box.x + box.w / 2, y: top + lh * (i + .5), s, r: 0, f: fnt }));
+  };
+  const subFont = "Gowun Dodum";
+  if (layout === "below") {
+    const band = phrase || forRequest ? Math.min(h * 0.19, 28) : 0;
+    G.art = { x: m, y: m, w: w - 2 * m, h: h - 2 * m - band - subH };
+    if (phrase) pushLines(splitLines(phrase, 2), { x: m, y: h - m - band - subH, w: w - 2 * m, h: band }, font);
+    if (sub) pushLines([sub], { x: m + w * .15, y: h - m - subH, w: w - 2 * m - w * .3, h: subH }, subFont);
+  } else if (layout === "calli") {
+    G.art = { x: m * .7, y: m * .7, w: w - 1.4 * m, h: h - 1.4 * m };
+    G.zone = { x: w * .14, y: h * .24, w: w * .72, h: h * .5 };
+    const lines = splitLines(phrase, 3);
+    const mainH = sub ? G.zone.h * .8 : G.zone.h;
+    if (lines.length) pushLines(lines, { x: G.zone.x, y: G.zone.y, w: G.zone.w, h: mainH }, font);
+    if (sub) pushLines([sub], { x: G.zone.x + G.zone.w * .1, y: G.zone.y + mainH + 1, w: G.zone.w * .8, h: G.zone.h - mainH }, subFont);
+  } else if (layout === "grid") {
+    const chars = phrase ? gridChars(phrase) : Array(14).fill("가");
+    const R = h >= w ? (chars.length > 14 ? 8 : 7) : 5;
+    const cells = []; // 원고지 규칙: 줄(세로 칸)이 띄어쓰기로 시작하면 그 칸은 비우지 않고 건너뜀
+    chars.forEach(ch => { if (ch === " " && cells.length % R === 0) return; cells.push(ch); });
+    const cols = Math.max(1, Math.min(4, Math.ceil(cells.length / R)));
+    const c = Math.min((h - 2 * m) / R, (w * .4) / cols);
+    const gw = cols * c, gh = R * c, gx = w - m - gw, gy = (h - gh) / 2;
+    G.art = { x: m, y: m, w: gx - m - 3, h: h - 2 * m };
+    for (let col = 0; col < cols; col++) for (let row = 0; row < R; row++)
+      G.shapes.push(`<rect x="${(gx + gw - (col + 1) * c).toFixed(2)}" y="${(gy + row * c).toFixed(2)}" width="${c.toFixed(2)}" height="${c.toFixed(2)}"/>`);
+    if (phrase) cells.slice(0, cols * R).forEach((ch, i) => {
+      if (ch === " ") return;
+      const col = Math.floor(i / R), row = i % R;
+      G.texts.push({ t: ch, x: gx + gw - (col + .5) * c, y: gy + (row + .5) * c, s: c * .7, r: 0, f: font });
+    });
+  } else { // arc
+    const cx = w / 2, cy = m + (h - 2 * m) * (sub ? .5 : .54);
+    const Rr = Math.min(w / 2 - m, (h - 2 * m) / 2) * .86;
+    const chars = (phrase || (forRequest ? "가나다라마바사아" : "")).replace(/\//g, " ").replace(/\s+/g, " ").trim().split("");
+    const n = chars.length;
+    const s = n ? Math.min(Rr * .22, (Rr * Math.PI * .62) / (n * 1.02)) : Rr * .2;
+    const rt = Rr - s * .15;
+    const artSide = (rt - s * .9) * 1.55;
+    G.art = { x: cx - artSide / 2, y: cy - artSide / 2 + s * .25, w: artSide, h: artSide };
+    G.shapes.push(`<circle cx="${cx}" cy="${cy}" r="${(rt + s * .72).toFixed(2)}"/>`);
+    if (phrase && n) {
+      const step = (s * 1.02) / rt, span = step * (n - 1), start = -Math.PI / 2 - span / 2;
+      chars.forEach((ch, i) => {
+        if (ch === " ") return;
+        const a = start + i * step;
+        G.texts.push({ t: ch, x: cx + rt * Math.cos(a), y: cy + rt * Math.sin(a), s, r: a * 180 / Math.PI + 90, f: font });
+      });
+    }
+    if (sub) pushLines([sub], { x: w * .2, y: h - m - subH * 1.2, w: w * .6, h: subH }, subFont);
+  }
+  return G;
+}
+
+/* ---------- 합성 ---------- */
+function compose(design, mode, { mirror = false, thumb = false, noText = false } = {}) {
+  const phrase = curPhrase(), sub = curSub(), font = curFont();
+  const G = geom(design.layout || "below", phrase, sub, font);
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${G.w} ${G.h}`);
+  svg.setAttribute("xmlns", NS);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", mode === "glow" ? "무드등에 새긴 도안 미리보기" : "철필용 도안");
+  const [vx, vy, vw, vh] = design.vb;
+  const a = G.art, s = Math.min(a.w / vw, a.h / vh);
+  const ox = a.x + (a.w - vw * s) / 2, oy = a.y + (a.h - vh * s) / 2;
+  const smm = thumb ? 1.6 : state.strokeMM;
+  const glow = mode === "glow", on = glow && state.on;
+  const uid = "f" + Math.random().toString(36).slice(2, 8);
+
+  if (glow) {
+    svg.innerHTML = `<defs>
+      <filter id="${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <linearGradient id="${uid}e" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="currentColor" stop-opacity="${on ? .22 : 0}"/><stop offset=".45" stop-color="currentColor" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".09"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+      <rect x=".6" y=".6" width="${G.w - 1.2}" height="${G.h - 1.2}" rx="1.5" fill="#ffffff" fill-opacity=".035" stroke="#ffffff" stroke-opacity=".28" stroke-width=".7"/>
+      <rect x=".6" y=".6" width="${G.w - 1.2}" height="${G.h - 1.2}" rx="1.5" fill="url(#${uid}e)"/>
+      <rect x=".6" y=".6" width="${G.w - 1.2}" height="${G.h - 1.2}" rx="1.5" fill="url(#${uid}s)"/>`;
+  } else {
+    svg.innerHTML = `<rect x="0" y="0" width="${G.w}" height="${G.h}" fill="#fff"/>
+      <rect x="1" y="1" width="${G.w - 2}" height="${G.h - 2}" fill="none" stroke="#9aa3ad" stroke-width=".4" stroke-dasharray="2 1.5"/>`;
+  }
+  const col = glow ? (state.on ? "currentColor" : "#ffffff") : "#111";
+  const op = glow && !state.on ? .38 : 1;
+  const outer = document.createElementNS(NS, "g");
+  if (mirror) outer.setAttribute("transform", `translate(${G.w} 0) scale(-1 1)`);
+  if (on) outer.setAttribute("filter", `url(#${uid})`);
+
+  const art = document.createElementNS(NS, "g");
+  art.setAttribute("transform", `translate(${ox} ${oy}) scale(${s}) translate(${-vx} ${-vy})`);
+  Object.entries({ fill: "none", stroke: col, "stroke-opacity": op, "stroke-width": smm / s, "stroke-linecap": "round", "stroke-linejoin": "round" })
+    .forEach(([k, v]) => art.setAttribute(k, v));
+  const clone = design.g.cloneNode(true);
+  clone.querySelectorAll("[data-dot]").forEach(d => { d.setAttribute("fill", col); d.setAttribute("fill-opacity", op); d.setAttribute("stroke", "none"); });
+  art.appendChild(clone);
+  outer.appendChild(art);
+
+  if (G.shapes.length) {
+    const sh = document.createElementNS(NS, "g");
+    Object.entries({ fill: "none", stroke: col, "stroke-opacity": op, "stroke-width": smm * .75 }).forEach(([k, v]) => sh.setAttribute(k, v));
+    sh.innerHTML = G.shapes.join("");
+    outer.appendChild(sh);
+  }
+  if (!noText) G.texts.forEach(it => {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("transform", `translate(${it.x.toFixed(2)} ${it.y.toFixed(2)}) rotate(${it.r.toFixed(1)})`);
+    t.setAttribute("text-anchor", "middle"); t.setAttribute("dominant-baseline", "central");
+    t.setAttribute("font-size", it.s.toFixed(2)); t.setAttribute("font-family", `'${it.f}', sans-serif`);
+    if (it.f === "Gaegu") t.setAttribute("font-weight", "700");
+    if (state.outline && !thumb) { t.setAttribute("fill", "none"); t.setAttribute("stroke", col); t.setAttribute("stroke-opacity", op); t.setAttribute("stroke-width", smm * .55); }
+    else { t.setAttribute("fill", col); t.setAttribute("fill-opacity", op); }
+    t.textContent = it.t;
+    outer.appendChild(t);
+  });
+  svg.appendChild(outer);
+  svg._geom = G;
+  return svg;
+}
+
+function render() {
+  if (!state.design) return;
+  const wrap = document.createElement("div");
+  wrap.className = "lit" + (state.led === "rainbow" ? " rainbow" : "");
+  if (state.led !== "rainbow") wrap.style.setProperty("--led", state.led);
+  wrap.appendChild(compose(state.design, "glow"));
+  $("plateView").replaceChildren(wrap);
+  $("stage").classList.toggle("on", state.on);
+  $("stage").style.setProperty("--led", state.led === "rainbow" ? "#a98bff" : state.led);
+  $("paperView").replaceChildren(compose(state.design, "paper", { mirror: state.mirror }));
+  const { w, h } = plateSize();
+  $("dimLabel").textContent = `${w} × ${h} mm${state.mirror ? " · 좌우반전" : ""}`;
+}
+function showMeta(d) {
+  $("designTag").textContent = d.example ? "예시 도안" : `AI 도안 · ${LAYOUT_NAME[d.layout] || ""}`;
+  $("dTitle").textContent = d.title || "나의 진로 무드등";
+  const ul = $("symList"); ul.replaceChildren();
+  (d.symbols || []).forEach(sy => {
+    const li = document.createElement("li"), b = document.createElement("b"), sp = document.createElement("span");
+    b.textContent = sy.name; sp.textContent = sy.meaning; li.append(b, sp); ul.appendChild(li);
+  });
+  $("tip").textContent = d.tip || ""; $("tip").hidden = !d.tip;
+}
+function setDesign(d) {
+  state.design = d.g ? d : Object.assign({}, d, parseSvg(d.svg));
+  showMeta(state.design); render();
+}
+function curLayout() { return document.querySelector('input[name=layout]:checked').value; }
+function updateLayoutHint() {
+  const l = curLayout();
+  let msg = LAYOUT_HINT[l];
+  if (state.design && !state.design.example && state.design.layout !== l && l !== "auto") msg += " 구성을 바꾸면 도안을 새로 그려야 해요.";
+  $("layoutHint").textContent = msg;
+}
+
+/* ---------- 서버(Apps Script)에 보낼 내용 ---------- */
+function specFor(layout) {
+  const G = geom(layout, curPhrase(), curSub(), curFont(), true);
+  const vw = 300, vh = Math.round(300 * G.art.h / G.art.w);
+  const o = { layout, vw, vh };
+  if (layout === "calli") {
+    const sx = vw / G.art.w, z = G.zone;
+    o.zone = [Math.round((z.x - G.art.x) * sx), Math.round((z.y - G.art.y) * sx), Math.round((z.x + z.w - G.art.x) * sx), Math.round((z.y + z.h - G.art.y) * sx)];
+  }
+  return o;
+}
+function buildPayload() {
+  const l = curLayout();
+  return {
+    code: $("classCode").value.trim(),
+    dream: $("dream").value.trim(), words: $("words").value.trim(), symbols: $("symbols").value.trim(),
+    phrase: curPhrase(), layout: l,
+    mood: document.querySelector('input[name=mood]:checked').value,
+    level: document.querySelector('input[name=level]:checked').value,
+    fine: $("fine").checked,
+    specs: (l === "auto" ? ["below", "calli", "grid", "arc"] : [l]).map(specFor)
+  };
+}
+
+function parseReply(text) {
+  const meta = { title: "", symbols: [], tip: "", layout: "", phrase: "" };
+  text.split("<svg")[0].split(/\r?\n/).forEach(line => {
+    const l = line.trim().replace(/^[-*]\s*/, ""); let m;
+    if ((m = l.match(/^구성\s*[:：]\s*(.+)$/))) { const k = m[1].replace(/\s/g, ""); meta.layout = NAME_LAYOUT[k] || Object.keys(NAME_LAYOUT).filter(n => k.includes(n)).map(n => NAME_LAYOUT[n])[0] || ""; }
+    else if ((m = l.match(/^제목\s*[:：]\s*(.+)$/))) meta.title = m[1].trim().slice(0, 20);
+    else if ((m = l.match(/^문구\s*[:：]\s*(.+)$/))) meta.phrase = m[1].trim().replace(/^["'“”‘’]|["'“”‘’]$/g, "").slice(0, 24);
+    else if ((m = l.match(/^상징\s*[:：]\s*(.+?)\s*[-–—:]\s*(.+)$/))) meta.symbols.push({ name: m[1].trim().slice(0, 14), meaning: m[2].trim().slice(0, 120) });
+    else if ((m = l.match(/^팁\s*[:：]\s*(.+)$/))) meta.tip = m[1].trim().slice(0, 160);
+  });
+  return meta;
+}
+function extractSvg(text) {
+  const i = text.indexOf("<svg"); if (i < 0) return null;
+  const body = text.slice(i), end = body.indexOf("</svg>");
+  return end >= 0 ? body.slice(0, end + 6) : null;
+}
+
+let ctl = null, timer = null;
+function setStatus(msg, live = false) { const s = $("status"); s.textContent = msg; s.classList.toggle("live", live); }
+function aiNote(msg, err = false) { const n = $("aiNote"); n.textContent = msg; n.hidden = !msg; n.classList.toggle("err", err); }
+const ERR = {
+  closed: "지금은 도안을 만들 수 있는 시간이 아니에요. 선생님께 말씀드려 주세요.",
+  bad_code: "수업 코드가 맞지 않아요. 칠판의 코드를 다시 확인해 주세요.",
+  limit: "이번 시간에 만들 수 있는 횟수를 다 썼어요. 선생님께 말씀드려 주세요.",
+  blocked: "쓸 수 없는 단어가 들어 있어요. 키워드를 바꿔 주세요.",
+  refused: "이 키워드로는 도안을 그릴 수 없어요. 키워드를 바꿔서 다시 시도해 보세요.",
+  busy: "AI 서버가 바빠요. 잠시 뒤에 다시 눌러 주세요.",
+  empty: "도안이 비어 있어요. 키워드를 조금 바꿔 다시 시도해 보세요.",
+  network: "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요."
+};
+
+async function generate() {
+  if (!API_URL) { aiNote("선생님: index.html 위쪽의 API_URL에 Apps Script 웹앱 주소를 넣어 주세요.", true); return; }
+  if (!$("classCode").value.trim()) { $("classCode").focus(); setStatus("수업 코드를 먼저 적어 주세요."); return; }
+  const dream = $("dream").value.trim();
+  if (!dream) { $("dream").focus(); setStatus("꿈이나 관심 진로를 먼저 적어 주세요."); return; }
+  try { localStorage.setItem("dl_code", $("classCode").value.trim()); } catch (_) {}
+  const chosen = curLayout(), hadPhrase = !!curPhrase(), fine = $("fine").checked;
+  ctl = new AbortController();
+  $("go").disabled = true; $("stop").hidden = false; aiNote("");
+  const t0 = Date.now();
+  const tick = () => setStatus(`AI가 도안을 그리는 중… ${Math.round((Date.now() - t0) / 1000)}초${fine ? " (정교하게는 1분 가까이 걸릴 수 있어요)" : ""}`, true);
+  tick(); timer = setInterval(tick, 1000);
+  try {
+    let j;
+    try {
+      const r = await fetch(API_URL, { method: "POST", body: JSON.stringify(buildPayload()), signal: ctl.signal });
+      j = await r.json();
+    } catch (e) {
+      if (e && e.name === "AbortError") throw { code: "cancelled" };
+      throw { code: "network" };
+    }
+    if (!j.ok) throw { code: j.error };
+    const svgStr = extractSvg(j.text), parsed = svgStr && parseSvg(svgStr);
+    if (!parsed || parsed.count === 0) throw { code: "empty" };
+    const meta = parseReply(j.text);
+    if (!hadPhrase && meta.phrase) $("phrase").value = meta.phrase;
+    const layout = chosen === "auto" ? (meta.layout || "below") : chosen;
+    const d = Object.assign(meta, parsed, { layout, svg: svgStr,
+      input: { dream, words: $("words").value.trim(), symbols: $("symbols").value.trim(), phrase: curPhrase(), sub: curSub() } });
+    setDesign(d); addHistory(d);
+    if (chosen === "auto") document.getElementById("ly-" + layout).checked = true;
+    updateLayoutHint();
+    const secs = Math.round((Date.now() - t0) / 1000);
+    setStatus(`도안 완성 · ${LAYOUT_NAME[layout]} · 도형 ${parsed.count}개 · ${secs}초${!hadPhrase && meta.phrase ? " · 문구는 AI가 지었어요, 고쳐도 돼요" : ""}`);
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "cancelled") setStatus("멈췄어요.");
+    else { setStatus(""); aiNote(ERR[code] || "도안을 만들지 못했어요. 다시 눌러 주세요.", true); }
+  } finally {
+    clearInterval(timer); $("stop").hidden = true; $("go").disabled = false;
+    $("go").textContent = state.history.length ? "다시 그리기" : "도안 만들기";
+  }
+}
+
+/* ---------- 기록 ---------- */
+function addHistory(d) {
+  state.history.push(d); if (state.history.length > 8) state.history.shift();
+  state.current = state.history.length - 1; drawHistory();
+}
+function drawHistory() {
+  const box = $("history"); box.replaceChildren();
+  $("histPanel").hidden = state.history.length === 0;
+  state.history.forEach((d, i) => {
+    const b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-current", i === state.current ? "true" : "false");
+    b.setAttribute("aria-label", `${i + 1}번째 도안 ${d.title || ""} 보기`);
+    const w = document.createElement("div"); w.className = "lit"; w.style.setProperty("--led", "#ffc46b");
+    w.appendChild(compose(d, "glow", { thumb: true, noText: true }));
+    const sm = document.createElement("small"); sm.textContent = d.title || `도안 ${i + 1}`;
+    b.append(w, sm);
+    b.onclick = () => {
+      state.current = i;
+      if (d.input) Object.entries(d.input).forEach(([k, v]) => $(k).value = v);
+      document.getElementById("ly-" + d.layout).checked = true;
+      setDesign(d); updateLayoutHint(); drawHistory();
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- 저장 ---------- */
+const PX = 12; // 1mm = 12px (약 305dpi)
+async function svgToImage(svg) {
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }));
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    return img;
+  } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+}
+async function plateCanvas() {
+  // 선(그림·칸)은 SVG 이미지로, 글자는 캔버스에 웹폰트로 직접 쓴다 (이미지로 바꾼 SVG는 웹폰트를 못 씀)
+  const svg = compose(state.design, "paper", { noText: true });
+  const G = svg._geom;
+  svg.setAttribute("width", G.w * PX); svg.setAttribute("height", G.h * PX);
+  const img = await svgToImage(svg);
+  const c = document.createElement("canvas"); c.width = G.w * PX; c.height = G.h * PX;
+  const ctx = c.getContext("2d");
+  if (state.mirror) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  for (const it of G.texts) {
+    try { await document.fonts.load(fontCss(it.f, it.s * PX), it.t); } catch (_) {}
+    ctx.save();
+    ctx.translate(it.x * PX, it.y * PX); ctx.rotate(it.r * Math.PI / 180);
+    ctx.font = fontCss(it.f, it.s * PX); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    if (state.outline) { ctx.strokeStyle = "#111"; ctx.lineWidth = state.strokeMM * .55 * PX; ctx.strokeText(it.t, 0, 0); }
+    else { ctx.fillStyle = "#111"; ctx.fillText(it.t, 0, 0); }
+    ctx.restore();
+  }
+  return { c, G };
+}
+async function a4Canvas() {
+  const { c: plate, G } = await plateCanvas();
+  const A = { w: 210, h: 297 };
+  const c = document.createElement("canvas"); c.width = A.w * PX; c.height = A.h * PX;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  const x = (A.w - G.w) / 2, y = 34;
+  ctx.drawImage(plate, x * PX, y * PX);
+  ctx.strokeStyle = "#555"; ctx.lineWidth = 0.25 * PX;
+  [[x, y], [x + G.w, y], [x, y + G.h], [x + G.w, y + G.h]].forEach(([px, py], i) => {
+    const dx = i % 2 ? 1 : -1, dy = i < 2 ? -1 : 1;
+    ctx.beginPath(); ctx.moveTo((px + dx * 2) * PX, py * PX); ctx.lineTo((px + dx * 8) * PX, py * PX);
+    ctx.moveTo(px * PX, (py + dy * 2) * PX); ctx.lineTo(px * PX, (py + dy * 8) * PX); ctx.stroke();
+  });
+  try { await document.fonts.load(`600 ${4 * PX}px 'IBM Plex Sans KR'`, "가"); } catch (_) {}
+  ctx.fillStyle = "#222"; ctx.textAlign = "center";
+  ctx.font = `600 ${5.2 * PX}px 'IBM Plex Sans KR', sans-serif`;
+  ctx.fillText(state.design.title || "나의 진로 무드등 도안", (A.w / 2) * PX, 18 * PX);
+  ctx.font = `400 ${3.4 * PX}px 'IBM Plex Sans KR', sans-serif`; ctx.fillStyle = "#555";
+  ctx.fillText(`아크릴 판 ${G.w} × ${G.h} mm · 배율 100%(실제 크기)로 인쇄${state.mirror ? " · 좌우반전(뒷면용)" : ""}`, (A.w / 2) * PX, 26 * PX);
+  const ry = y + G.h + 16, rx = x;
+  ctx.strokeStyle = "#222"; ctx.lineWidth = 0.3 * PX;
+  ctx.beginPath(); ctx.moveTo(rx * PX, ry * PX); ctx.lineTo((rx + 50) * PX, ry * PX);
+  for (let i = 0; i <= 50; i += 5) { const hh = i % 10 ? 2 : 3.5; ctx.moveTo((rx + i) * PX, ry * PX); ctx.lineTo((rx + i) * PX, (ry - hh) * PX); }
+  ctx.stroke();
+  ctx.textAlign = "left"; ctx.font = `400 ${3 * PX}px 'IBM Plex Sans KR', sans-serif`;
+  ctx.fillText("← 인쇄 후 자로 재서 50mm가 맞는지 확인하세요", (rx + 54) * PX, (ry + 0.5) * PX);
+  return c;
+}
+function fileBase() { const d = $("dream").value.trim() || "도안"; return `무드등도안_${d.replace(/[\\/:*?"<>|\s]+/g, "_").slice(0, 20)}`; }
+function saveMsg(m) { $("saveStatus").textContent = m; }
+function downloadBlob(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function doSave(kind) {
+  if (!state.design) return;
+  const btns = [$("savePdf"), $("savePng"), $("printBtn")]; btns.forEach(b => b.disabled = true);
+  saveMsg("파일을 만드는 중…");
+  try {
+    if (kind === "png") {
+      const { c } = await plateCanvas();
+      downloadBlob(await new Promise(r => c.toBlob(r, "image/png")), fileBase() + ".png");
+    } else {
+      const c = await a4Canvas();
+      const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      pdf.addImage(c.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
+      downloadBlob(pdf.output("blob"), fileBase() + ".pdf");
+    }
+    saveMsg("저장했어요. 다운로드 폴더를 확인하세요.");
+  } catch (e) { console.error(e); saveMsg("파일을 만들지 못했어요. 다시 눌러 주세요."); }
+  finally { btns.forEach(b => b.disabled = false); }
+}
+function printActual() {
+  if (!state.design) return;
+  const svg = compose(state.design, "paper", { mirror: state.mirror });
+  const G = svg._geom;
+  svg.setAttribute("width", G.w + "mm"); svg.setAttribute("height", G.h + "mm");
+  const area = $("printArea"); area.replaceChildren();
+  const page = document.createElement("div"); page.className = "pa-page";
+  const h = document.createElement("div"); h.className = "pa-title"; h.textContent = state.design.title || "나의 진로 무드등 도안";
+  const p = document.createElement("div"); p.className = "pa-sub";
+  p.textContent = `아크릴 판 ${G.w} × ${G.h} mm · 배율 100%(실제 크기)로 인쇄${state.mirror ? " · 좌우반전(뒷면용)" : ""}`;
+  const box = document.createElement("div"); box.className = "pa-plate"; box.style.width = G.w + "mm"; box.appendChild(svg);
+  const ruler = document.createElement("div"); ruler.className = "pa-ruler";
+  ruler.innerHTML = `<svg width="54mm" height="6mm" viewBox="0 0 54 6"><path d="M0 5H50${Array.from({ length: 11 }, (_, i) => `M${i * 5} 5V${i % 2 ? 3 : 1.5}`).join("")}" stroke="#222" stroke-width=".3" fill="none"/></svg><span>← 인쇄 후 자로 재서 50mm가 맞는지 확인하세요</span>`;
+  page.append(h, p, box, ruler); area.appendChild(page);
+  setTimeout(() => window.print(), 50);
+}
+
+/* ---------- 이벤트 ---------- */
+$("form").addEventListener("submit", e => { e.preventDefault(); generate(); });
+$("stop").onclick = () => ctl && ctl.abort();
+document.querySelectorAll("input[name=layout]").forEach(r => r.addEventListener("change", updateLayoutHint));
+["phrase", "sub"].forEach(id => $(id).addEventListener("input", render));
+document.querySelectorAll("input[name=font]").forEach(r => r.addEventListener("change", render));
+$("plate").addEventListener("change", () => { render(); drawHistory(); });
+$("mirror").addEventListener("change", e => { state.mirror = e.target.checked; render(); });
+$("outline").addEventListener("change", e => { state.outline = e.target.checked; render(); });
+$("stroke").addEventListener("change", e => { state.strokeMM = parseFloat(e.target.value); render(); });
+document.querySelectorAll(".swatch").forEach(b => b.onclick = () => {
+  state.led = b.dataset.led; state.on = true;
+  document.querySelectorAll(".swatch").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  $("power").textContent = "불 끄기"; $("power").setAttribute("aria-pressed", "true"); render();
+});
+$("power").onclick = () => {
+  state.on = !state.on; $("power").textContent = state.on ? "불 끄기" : "불 켜기";
+  $("power").setAttribute("aria-pressed", state.on ? "true" : "false"); render();
+};
+$("savePdf").onclick = () => doSave("pdf");
+$("savePng").onclick = () => doSave("png");
+$("printBtn").onclick = printActual;
+
+/* ---------- 시작 ---------- */
+Object.entries(EXAMPLE.input).forEach(([k, v]) => $(k).value = v);
+try { const c = localStorage.getItem("dl_code"); if (c) $("classCode").value = c; } catch (_) {}
+setDesign(EXAMPLE); updateLayoutHint();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+if (!API_URL) aiNote("선생님: index.html 위쪽의 API_URL에 Apps Script 웹앱 주소를 넣으면 AI 그리기가 켜져요.", true);
+})();
+</script>
+</body>
+</html>
