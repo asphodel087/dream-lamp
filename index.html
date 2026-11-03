@@ -461,24 +461,28 @@ function geom(layout, phrase, sub, font, forRequest = false) {
   const { w, h } = plateSize(), m = Math.max(8, Math.min(w, h) * 0.07);
   const G = { w, h, m, art: null, zone: null, texts: [], shapes: [] };
   const subH = sub ? Math.min(h * 0.075, 10) : 0;
-  const pushLines = (lines, box, fnt, align = "center") => {
-    const s = fitSize(lines, box.w, box.h, fnt); if (!s) return;
+  // 작은 글씨는 본문과 같은 글씨체로, 본문 크기의 55%를 넘지 않게
+  let mainS = 0;
+  const pushLines = (lines, box, fnt, maxS = Infinity) => {
+    const s = Math.min(fitSize(lines, box.w, box.h, fnt), maxS); if (!s) return 0;
     const lh = s * 1.12, total = lh * lines.length, top = box.y + (box.h - total) / 2;
     lines.forEach((l, i) => G.texts.push({ t: l, x: box.x + box.w / 2, y: top + lh * (i + .5), s, r: 0, f: fnt }));
+    return s;
   };
-  const subFont = "Gowun Dodum";
+  const subFont = font;
+  const subMax = () => (mainS || Math.min(w, h) * .14) * .55;
   if (layout === "below") {
     const band = phrase || forRequest ? Math.min(h * 0.19, 28) : 0;
     G.art = { x: m, y: m, w: w - 2 * m, h: h - 2 * m - band - subH };
-    if (phrase) pushLines(splitLines(phrase, 2), { x: m, y: h - m - band - subH, w: w - 2 * m, h: band }, font);
-    if (sub) pushLines([sub], { x: m + w * .15, y: h - m - subH, w: w - 2 * m - w * .3, h: subH }, subFont);
+    if (phrase) mainS = pushLines(splitLines(phrase, 2), { x: m, y: h - m - band - subH, w: w - 2 * m, h: band }, font);
+    if (sub) pushLines([sub], { x: m + w * .15, y: h - m - subH, w: w - 2 * m - w * .3, h: subH }, subFont, subMax());
   } else if (layout === "calli") {
     G.art = { x: m * .7, y: m * .7, w: w - 1.4 * m, h: h - 1.4 * m };
     G.zone = { x: w * .14, y: h * .24, w: w * .72, h: h * .5 };
     const lines = splitLines(phrase, 3);
     const mainH = sub ? G.zone.h * .8 : G.zone.h;
-    if (lines.length) pushLines(lines, { x: G.zone.x, y: G.zone.y, w: G.zone.w, h: mainH }, font);
-    if (sub) pushLines([sub], { x: G.zone.x + G.zone.w * .1, y: G.zone.y + mainH + 1, w: G.zone.w * .8, h: G.zone.h - mainH }, subFont);
+    if (lines.length) mainS = pushLines(lines, { x: G.zone.x, y: G.zone.y, w: G.zone.w, h: mainH }, font);
+    if (sub) pushLines([sub], { x: G.zone.x + G.zone.w * .12, y: G.zone.y + mainH + 2, w: G.zone.w * .76, h: G.zone.h - mainH }, subFont, subMax());
   } else if (layout === "grid") {
     const chars = phrase ? gridChars(phrase) : Array(14).fill("가");
     const R = h >= w ? (chars.length > 14 ? 8 : 7) : 5;
@@ -513,7 +517,7 @@ function geom(layout, phrase, sub, font, forRequest = false) {
         G.texts.push({ t: ch, x: cx + rt * Math.cos(a), y: cy + rt * Math.sin(a), s, r: a * 180 / Math.PI + 90, f: font });
       });
     }
-    if (sub) pushLines([sub], { x: w * .2, y: h - m - subH * 1.2, w: w * .6, h: subH }, subFont);
+    if (sub) { mainS = s; pushLines([sub], { x: w * .2, y: h - m - subH * 1.2, w: w * .6, h: subH }, subFont, subMax()); }
   }
   return G;
 }
