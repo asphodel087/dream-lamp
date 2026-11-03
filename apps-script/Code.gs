@@ -17,7 +17,10 @@ const SHEET_ID = '';
 const MODELS = { quick: 'claude-haiku-5-5', fine: 'claude-sonnet-5-5' };
 // 100만 토큰당 달러 (2026년 11월 요금표 기준, 예상 비용 계산용)
 const PRICE = { 'claude-haiku-5-5': { in: 0.10, out: 0.50 }, 'claude-sonnet-5-5': { in: 2, out: 10 } };
-const MAX_TOKENS = 8000;
+// 생각(thinking)도 출력 토큰에 포함돼요. 생각이 한도를 다 쓰면 그림이 비어서 오므로 넉넉히 둡니다.
+const MAX_TOKENS = 16000;
+// 생각 분량: Haiku는 짧게(low), Sonnet은 보통(medium). 높이면 더 정교해지지만 느리고 비싸져요.
+const EFFORT = { 'claude-haiku-5-5': 'low', 'claude-sonnet-5-5': 'medium' };
 
 // 기본 금지어 (설정 시트 '금지어' 칸에 더 추가할 수 있어요)
 const BANNED = ['섹스', '야동', '자살', '자해', '살인', '마약', '시발', '씨발', '병신', '좆', '존나', '개새끼', '느금', '니애미', '애미', '애비', '일베', '나치'];
@@ -206,7 +209,7 @@ function callClaude_(model, prompt, maxTokens) {
   const r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    payload: JSON.stringify({ model: model, max_tokens: maxTokens, system: SYSTEM, messages: [{ role: 'user', content: prompt }] })
+    payload: JSON.stringify({ model: model, max_tokens: maxTokens, output_config: { effort: EFFORT[model] || 'low' }, system: SYSTEM, messages: [{ role: 'user', content: prompt }] })
   });
   const status = r.getResponseCode();
   let j = {};
@@ -215,7 +218,7 @@ function callClaude_(model, prompt, maxTokens) {
   if (status !== 200) { console.error(status, r.getContentText().slice(0, 800)); return { ok: false, error: 'upstream' }; }
   if (j.stop_reason === 'refusal') return { ok: false, error: 'refused', usage: j.usage };
   const text = (j.content || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('');
-  if (!text) return { ok: false, error: 'empty', usage: j.usage };
+  if (!text) return { ok: false, error: j.stop_reason === 'max_tokens' ? 'too_long' : 'empty', usage: j.usage };
   return { ok: true, text: text, usage: j.usage };
 }
 
