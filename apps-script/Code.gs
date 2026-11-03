@@ -19,8 +19,9 @@ const MODELS = { quick: 'claude-haiku-5-5', fine: 'claude-sonnet-5-5' };
 const PRICE = { 'claude-haiku-5-5': { in: 0.10, out: 0.50 }, 'claude-sonnet-5-5': { in: 2, out: 10 } };
 // 생각(thinking)도 출력 토큰에 포함돼요. 생각이 한도를 다 쓰면 그림이 비어서 오므로 넉넉히 둡니다.
 const MAX_TOKENS = 16000;
-// 생각 분량: 둘 다 보통(medium). low로 낮추면 빠르고 싸지만 구도가 단순해져요.
-const EFFORT = { 'claude-haiku-5-5': 'medium', 'claude-sonnet-5-5': 'medium' };
+// 생각 분량 기본값. 설정 시트의 '생각분량'(low/medium/high)이 있으면 그 값을 씁니다.
+// medium 이상은 규칙이 많을 때 생각이 길어져 출력 한도를 넘길 수 있어요.
+const EFFORT_DEFAULT = 'low';
 
 // 기본 금지어 (설정 시트 '금지어' 칸에 더 추가할 수 있어요)
 const BANNED = ['섹스', '야동', '자살', '자해', '살인', '마약', '시발', '씨발', '병신', '좆', '존나', '개새끼', '느금', '니애미', '애미', '애비', '일베', '나치'];
@@ -55,13 +56,14 @@ function setup() {
   let s = ss.getSheetByName('설정');
   if (!s) {
     s = ss.insertSheet('설정');
-    s.getRange('A1:C6').setValues([
+    s.getRange('A1:C7').setValues([
       ['항목', '값', '설명'],
       ['수업코드', '', '쉼표로 여러 개 입력. 비워 두면 아무도 생성할 수 없어요. 예: 별빛31, 달빛32'],
       ['하루한도', 400, '하루 전체 생성 횟수 상한 (모든 반 합계)'],
       ['코드당 시간한도', 150, '수업 코드 하나로 1시간에 생성할 수 있는 횟수'],
       ['정교하게 허용', true, 'FALSE로 바꾸면 "더 정교하게(Sonnet)"를 막고 Haiku만 써요'],
-      ['금지어', '', '쉼표로 추가. 코드 안의 기본 금지어에 더해져요']
+      ['금지어', '', '쉼표로 추가. 코드 안의 기본 금지어에 더해져요'],
+      ['생각분량', 'low', 'low(빠름·권장) / medium / high. 높일수록 느려지고, 도안이 끝나지 않을 수 있어요']
     ]);
     s.getRange('A1:C1').setFontWeight('bold');
     s.setColumnWidth(1, 140); s.setColumnWidth(2, 260); s.setColumnWidth(3, 460);
@@ -138,7 +140,7 @@ function handle_(req) {
   if (!okD || !okH) { log_(code, '한도초과', f, '', null); return { ok: false, error: 'limit' }; }
 
   const model = f.fine ? MODELS.fine : MODELS.quick;
-  const res = callClaude_(model, buildAsk_(f, specs), MAX_TOKENS);
+  const res = callClaude_(model, buildAsk_(f, specs), MAX_TOKENS, cfg.effort);
   log_(code, res.ok ? '성공' : '실패(' + res.error + ')', f, model, res.usage);
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true, text: res.text, model: f.fine ? 'fine' : 'quick', remaining: Math.max(0, cfg.daily - count_(dk)) };
@@ -155,7 +157,8 @@ function settings_() {
     daily: Number(map['하루한도']) || 400,
     hourly: Number(map['코드당 시간한도']) || 150,
     allowFine: String(map['정교하게 허용']).toUpperCase() !== 'FALSE',
-    banned: BANNED.concat(list(map['금지어']))
+    banned: BANNED.concat(list(map['금지어'])),
+    effort: ['low', 'medium', 'high'].indexOf(String(map['생각분량'] || '').trim().toLowerCase()) >= 0 ? String(map['생각분량']).trim().toLowerCase() : EFFORT_DEFAULT
   };
 }
 
@@ -203,13 +206,13 @@ function log_(code, result, f, model, usage) {
 }
 
 /* ---------------- Claude 호출 ---------------- */
-function callClaude_(model, prompt, maxTokens) {
+function callClaude_(model, prompt, maxTokens, effort) {
   const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
   if (!key) return { ok: false, error: 'no_key' };
   const r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    payload: JSON.stringify({ model: model, max_tokens: maxTokens, output_config: { effort: EFFORT[model] || 'low' }, system: SYSTEM, messages: [{ role: 'user', content: prompt }] })
+    payload: JSON.stringify({ model: model, max_tokens: maxTokens, output_config: { effort: effort || EFFORT_DEFAULT }, system: SYSTEM, messages: [{ role: 'user', content: prompt }] })
   });
   const status = r.getResponseCode();
   let j = {};
