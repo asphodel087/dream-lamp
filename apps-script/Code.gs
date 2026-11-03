@@ -116,7 +116,10 @@ function handle_(req) {
     fine: !!req.fine && cfg.allowFine
   };
   if (!f.dream) return { ok: false, error: 'bad_request' };
-  const specs = cleanSpecs_(req.specs, f.layout);
+  // 리스는 앱이 그림을 직접 그리므로 문구와 설명만 받는다
+  const textOnly = req.mode === 'text';
+  if (textOnly) { f.layout = 'wreath'; f.fine = false; }
+  const specs = textOnly ? [] : cleanSpecs_(req.specs, f.layout);
   if (!specs) return { ok: false, error: 'bad_request' };
 
   const joined = [f.dream, f.words, f.symbols, f.phrase].join('').replace(/\s/g, '').toLowerCase();
@@ -141,8 +144,8 @@ function handle_(req) {
   if (!okD || !okH) { log_(code, '한도초과', f, '', null); return { ok: false, error: 'limit' }; }
 
   const model = f.fine ? MODELS.fine : MODELS.quick;
-  const res = callClaude_(model, buildAsk_(f, specs), MAX_TOKENS, cfg.effort);
-  log_(code, res.ok ? '성공' : '실패(' + res.error + ')', f, model, res.usage);
+  const res = textOnly ? callClaude_(model, buildText_(f), 2000, 'low') : callClaude_(model, buildAsk_(f, specs), MAX_TOKENS, cfg.effort);
+  log_(code, (res.ok ? '성공' : '실패(' + res.error + ')') + (textOnly ? ' · 문구만' : ''), f, model, res.usage);
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true, text: res.text, model: f.fine ? 'fine' : 'quick', remaining: Math.max(0, cfg.daily - count_(dk)) };
 }
@@ -168,7 +171,7 @@ function clean_(v, max) {
 }
 function cleanSpecs_(specs, layout) {
   if (!Array.isArray(specs)) return null;
-  const want = layout === 'auto' ? ['below', 'calli', 'grid', 'arc', 'wreath'] : [layout];
+  const want = layout === 'auto' ? ['below', 'calli', 'grid', 'arc'] : [layout];
   const out = [];
   for (let i = 0; i < want.length; i++) {
     const s = specs.filter(function (x) { return x && x.layout === want[i]; })[0];
@@ -293,11 +296,28 @@ function buildAsk_(f, specs) {
     '- 의미 없는 짧은 곡선, 낙서 같은 선, 상징 안쪽을 채우는 줄무늬는 넣지 않는다. 모든 선은 무엇인지 알아볼 수 있는 모양(꽃, 잎, 줄기, 별, 반짝임, 상징)의 일부여야 한다.\n' +
     '- 같은 장식을 똑같이 반복하지 말고 꽃 모양·별 모양을 2가지 이상 섞는다.\n\n' +
     '[출력 형식] 아래 형식 그대로, 다른 말 없이 한국어로:\n' +
-    (auto ? '구성: (그림+아래문구, 문구중심, 원고지, 둥근문구, 리스 중 하나)\n' : '') +
+    (auto ? '구성: (그림+아래문구, 문구중심, 원고지, 둥근문구 중 하나)\n' : '') +
     '제목: (도안 이름, 12자 이내)\n' +
     (f.phrase ? '' : '문구: (' + phraseRule + ')\n') +
     '상징: (상징 이름) - (학생의 진로·키워드와 연결한 의미 한 문장)\n' +
     '상징: (상징마다 한 줄씩 반복)\n' +
     '팁: (이 도안을 철필로 새길 때 도움이 되는 구체적인 팁 한 문장)\n' +
     '<svg ...>\n(요소마다 한 줄씩)\n</svg>';
+}
+
+/** 리스(꽃 화관)형: 그림은 앱이 그리므로 문구와 설명만 짓는다 */
+function buildText_(f) {
+  const words = f.words.split(/[,，、]/).map(function (s) { return s.trim(); }).filter(String).slice(0, 3).join(', ');
+  return '학생의 아크릴 LED 무드등에 들어갈 꽃 리스(화관) 도안의 문구를 지어 줘. 꽃과 잎으로 엮은 둥근 화관 가운데에 문구가 손글씨로 들어간다. 그림은 앱이 그리니 그리지 않는다.\n\n' +
+    '[학생 정보]\n' +
+    '- 꿈·되고 싶은 모습: ' + f.dream + '\n' +
+    '- 나를 나타내는 키워드: ' + (words || '(없음)') + '\n' +
+    (f.symbols ? '- 넣고 싶은 상징: ' + f.symbols + '\n' : '') + '\n' +
+    '[출력 형식] 아래 형식 그대로, 다른 말 없이 한국어로:\n' +
+    '제목: (도안 이름, 12자 이내)\n' +
+    '문구: (학생의 꿈과 키워드로 지은 따뜻한 다짐이나 응원 문구, 띄어쓰기 포함 14자 이내, 두세 줄로 나눌 곳에 / 를 넣는다)\n' +
+    '상징: 꽃 - (학생의 꿈·키워드와 연결한 의미 한 문장)\n' +
+    '상징: 잎 - (의미 한 문장)\n' +
+    '상징: 리본 - (의미 한 문장)\n' +
+    '팁: (꽃 리스를 철필로 새길 때 도움이 되는 구체적인 팁 한 문장)';
 }

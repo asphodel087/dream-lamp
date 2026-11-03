@@ -199,15 +199,27 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
           <label for="ly-auto"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="2" stroke-width="1.4"/><path d="M20 9l2.6 7.4L30 19l-7.4 2.6L20 29l-2.6-7.4L10 19l7.4-2.6z"/></svg>AI가<br>골라 줘</label>
         </div>
         <span class="hint" id="layoutHint"></span>
+        <div class="row" id="wreathOpts" hidden>
+          <label class="toggle" for="wFlower">꽃
+            <select id="wFlower" style="width:auto;padding:3px 6px">
+              <option value="mix" selected>섞기</option>
+              <option value="rose">장미</option>
+              <option value="simple">다섯 꽃잎</option>
+            </select>
+          </label>
+          <label class="toggle" for="wLeaf">잎
+            <select id="wLeaf" style="width:auto;padding:3px 6px">
+              <option value="0.8">가볍게</option>
+              <option value="1" selected>보통</option>
+              <option value="1.35">풍성하게</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div class="field">
-        <label for="phrase">새길 문구 <span class="hint">· 비워 두면 AI가 지어 줘요 · <b>/</b> 로 줄 나눔</span></label>
+        <label for="phrase">새길 문구 <span class="hint">· 비워 두면 AI가 지어 줘요 · <b>/</b> 로 줄 나눔 · 이름 등 개인정보는 넣지 마세요</span></label>
         <input type="text" id="phrase" maxlength="24" placeholder="예: 별을 향해 / 한 걸음씩">
-      </div>
-      <div class="field">
-        <label for="sub">작은 글씨 <span class="hint">· 선택 · 이름·학교 등 개인정보는 넣지 마세요</span></label>
-        <input type="text" id="sub" maxlength="24" placeholder="예: 2026 가을, 나의 다짐">
       </div>
       <div class="field">
         <span class="lbl" id="fontLbl">문구 글씨체</span>
@@ -221,10 +233,8 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
       <div class="field">
         <label for="plate">아크릴 판 크기</label>
         <select id="plate">
-          <option value="150x150">정사각 150 × 150 mm</option>
-          <option value="100x150">세로형 100 × 150 mm</option>
-          <option value="150x100">가로형 150 × 100 mm</option>
-          <option value="120x120">작은 정사각 120 × 120 mm</option>
+          <option value="120x160" selected>세로 120 × 160 mm</option>
+          <option value="160x120">가로 160 × 120 mm</option>
         </select>
       </div>
       <div class="field">
@@ -271,7 +281,7 @@ input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offs
         </section>
 
         <section class="card" aria-labelledby="tpTitle">
-          <div class="card-head"><h3 id="tpTitle">철필용 도안</h3><span class="dim" id="dimLabel">150 × 150 mm</span></div>
+          <div class="card-head"><h3 id="tpTitle">철필용 도안</h3><span class="dim" id="dimLabel">120 × 160 mm</span></div>
           <div class="paperwrap">
             <div class="paper" id="paperView"></div>
             <div class="paper-ctrl">
@@ -349,7 +359,7 @@ const LAYOUT_HINT = {
   calli: "문구를 크게 쓰고, 그림은 꽃·별 같은 장식으로 둘러요.",
   grid: "그림 옆에 원고지 칸을 그리고 한 칸에 한 글자씩 세로로 넣어요. 띄어쓰기는 빼고 채워요. 20자 안팎이 예뻐요.",
   arc: "가운데 그림 위로 문구가 둥글게 휘어 들어가요.",
-  wreath: "잎과 꽃이 이어진 둥근 화관 가운데에 문구를 넣어요.",
+  wreath: "앱이 꽃 화관을 바로 그려요. 다시 그리기를 누르면 모양이 바뀌어요. 문구를 비워 두면 AI가 지어 줘요.",
   auto: "키워드에 어울리는 구성을 AI가 골라요."
 };
 
@@ -384,7 +394,7 @@ const EXAMPLE = {
   ],
   tip: "달의 바깥 곡선은 한 번에 긋기보다 짧게 끊어 이어 그리면 덜 미끄러져요.",
   svg: exampleSvg(),
-  input: { dream: "천문학자", words: "호기심, 탐구, 밤하늘", symbols: "초승달, 별, 망원경", phrase: "별을 향해", sub: "" },
+  input: { dream: "천문학자", words: "호기심, 탐구, 밤하늘", symbols: "초승달, 별, 망원경", phrase: "별을 향해" },
   example: true
 };
 
@@ -429,7 +439,7 @@ function fontCss(font, size) { return `${font === "Gaegu" ? "700 " : ""}${size}p
 function textW(str, font) { mctx.font = fontCss(font, 100); return mctx.measureText(str).width / 100; }
 function curFont() { return document.querySelector('input[name=font]:checked').value; }
 function curPhrase() { return $("phrase").value.trim(); }
-function curSub() { return $("sub").value.trim(); }
+function curSub() { return ""; }
 function plateSize() { const [w, h] = $("plate").value.split("x").map(Number); return { w, h }; }
 function splitLines(phrase, maxLines) {
   if (!phrase) return [];
@@ -491,6 +501,9 @@ function geom(layout, phrase, sub, font, forRequest = false) {
     // r: 화관 안쪽 경계. 글씨는 r의 80% 원 안에만 들어가게 해서 화관 선과 닿지 않게
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) * .3;
     G.ring = { cx, cy, r };
+    // 앱이 그리는 화관(300 단위, 반지름 98)을 글씨 원보다 15% 크게 맞춤
+    const side = 300 * (r * 1.15 / 98);
+    G.art = { x: cx - side / 2, y: cy - side / 2, w: side, h: side };
     const lines = splitLines(phrase, 3);
     const tw = r * 1.3, th = sub ? r * .78 : r * .98;
     const box = { x: cx - tw / 2, y: cy - (sub ? r * .5 : th / 2), w: tw, h: th };
@@ -615,7 +628,7 @@ function render() {
   $("dimLabel").textContent = `${w} × ${h} mm${state.mirror ? " · 좌우반전" : ""}`;
 }
 function showMeta(d) {
-  $("designTag").textContent = d.example ? "예시 도안" : `AI 도안 · ${LAYOUT_NAME[d.layout] || ""}`;
+  $("designTag").textContent = d.example ? "예시 도안" : d.procedural ? "앱이 그린 리스" : `AI 도안 · ${LAYOUT_NAME[d.layout] || ""}`;
   $("dTitle").textContent = d.title || "나의 진로 무드등";
   const ul = $("symList"); ul.replaceChildren();
   (d.symbols || []).forEach(sy => {
@@ -631,9 +644,149 @@ function setDesign(d) {
 function curLayout() { return document.querySelector('input[name=layout]:checked').value; }
 function updateLayoutHint() {
   const l = curLayout();
+  $("wreathOpts").hidden = l !== "wreath";
   let msg = LAYOUT_HINT[l];
   if (state.design && !state.design.example && state.design.layout !== l && l !== "auto") msg += " 구성을 바꾸면 도안을 새로 그려야 해요.";
   $("layoutHint").textContent = msg;
+}
+
+// 리스(꽃 화관) 선화 생성기 — 크로키 느낌의 덩굴·잎·꽃을 원을 따라 배치
+// makeWreath({ cx, cy, R, seed, flowers, density }) → SVG 요소 문자열 (stroke만 사용, 작은 점은 data-dot)
+function makeWreath(o) {
+  const { cx = 150, cy = 150, R = 110, seed = 7, density = 1, gapDeg = 34, flowerStyle = "mix" } = o;
+  let s = seed >>> 0;
+  const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const jit = (a) => (rnd() * 2 - 1) * a;
+  const rad = (d) => (d * Math.PI) / 180;
+  const f = (n) => n.toFixed(1);
+  const out = [];
+  const start = 90 + gapDeg / 2, end = 90 + 360 - gapDeg / 2; // 아래쪽(90°)을 비워 리본 자리
+  const P = (deg, r) => [cx + r * Math.cos(rad(deg)), cy + r * Math.sin(rad(deg))];
+
+  // 매끈한 곡선: Catmull-Rom → Bezier
+  const smooth = (pts) => {
+    let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${f(c1[0])} ${f(c1[1])} ${f(c2[0])} ${f(c2[1])} ${f(p2[0])} ${f(p2[1])}`;
+    }
+    return d;
+  };
+
+  // 덩굴 줄기 2가닥 (서로 엇갈리며 살짝 흔들림)
+  const vine = (phase, amp, off, a0, a1) => {
+    const pts = [];
+    for (let a = a0; a <= a1 + 0.01; a += 8) pts.push(P(a, R + off + amp * Math.sin(rad(a * 3 + phase)) + jit(1.2)));
+    return pts;
+  };
+  const v1 = vine(0, 4, 0, start, end), v2 = vine(120, 5, -3, start + 14, end - 22);
+  out.push(`<path d="${smooth(v1)}"/>`, `<path d="${smooth(v2)}"/>`);
+
+  // 잎: 아몬드 모양 + 잎맥, 줄기 방향에서 바깥/안쪽으로 번갈아
+  const leaf = (x, y, ang, len) => {
+    const w = len * 0.36, tip = [x + len * Math.cos(ang), y + len * Math.sin(ang)];
+    const nx = -Math.sin(ang), ny = Math.cos(ang), mx = x + len * 0.5 * Math.cos(ang), my = y + len * 0.5 * Math.sin(ang);
+    const c1 = [mx + nx * w, my + ny * w], c2 = [mx - nx * w, my - ny * w];
+    const vein = [x + len * 0.72 * Math.cos(ang), y + len * 0.72 * Math.sin(ang)];
+    return `<path d="M${f(x)} ${f(y)} Q${f(c1[0])} ${f(c1[1])} ${f(tip[0])} ${f(tip[1])} Q${f(c2[0])} ${f(c2[1])} ${f(x)} ${f(y)}"/>` +
+           `<path d="M${f(x)} ${f(y)} L${f(vein[0])} ${f(vein[1])}"/>`;
+  };
+  const step = 13 / density;
+  let side = 1;
+  for (let a = start + 6; a < end - 4; a += step + jit(3)) {
+    const [x, y] = P(a, R + 4 * Math.sin(rad(a * 3)));
+    const tang = rad(a + 90) * (side > 0 ? 1 : 1);
+    const ang = tang + side * rad(38 + jit(12)) + (a > 270 ? 0 : 0);
+    out.push(leaf(x, y, side > 0 ? ang : ang + Math.PI * 0 , 13 + rnd() * 9));
+    side = -side;
+  }
+
+  // 꽃: 5장 꽃잎(고리 모양) + 가운데 원 + 점
+  const flower = (x, y, r, rot) => {
+    let d = "";
+    for (let i = 0; i < 5; i++) {
+      const a = rot + (i * 2 * Math.PI) / 5, a1 = a - 0.42, a2 = a + 0.42;
+      const p1 = [x + r * 0.35 * Math.cos(a1), y + r * 0.35 * Math.sin(a1)];
+      const p2 = [x + r * 0.35 * Math.cos(a2), y + r * 0.35 * Math.sin(a2)];
+      const t1 = [x + r * 1.25 * Math.cos(a - 0.5), y + r * 1.25 * Math.sin(a - 0.5)];
+      const t2 = [x + r * 1.25 * Math.cos(a + 0.5), y + r * 1.25 * Math.sin(a + 0.5)];
+      d += `M${f(p1[0])} ${f(p1[1])} C${f(t1[0])} ${f(t1[1])} ${f(t2[0])} ${f(t2[1])} ${f(p2[0])} ${f(p2[1])} `;
+    }
+    return `<path d="${d.trim()}"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(r * 0.3)}"/><circle cx="${f(x)}" cy="${f(y)}" r="1.6"/>`;
+  };
+  // 겹꽃(장미 느낌): 나선 + 바깥 꽃잎
+  const rose = (x, y, r) => {
+    let d = `M${f(x)} ${f(y)}`;
+    for (let t = 0; t < 4.2 * Math.PI; t += 0.5) {
+      const rr = (t / (4.2 * Math.PI)) * r * 0.75;
+      d += ` L${f(x + rr * Math.cos(t))} ${f(y + rr * Math.sin(t))}`;
+    }
+    let pet = "";
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 2 * Math.PI) / 5 + 0.3;
+      const p1 = [x + r * 0.8 * Math.cos(a - 0.55), y + r * 0.8 * Math.sin(a - 0.55)];
+      const p2 = [x + r * 0.8 * Math.cos(a + 0.55), y + r * 0.8 * Math.sin(a + 0.55)];
+      const c = [x + r * 1.35 * Math.cos(a), y + r * 1.35 * Math.sin(a)];
+      pet += `M${f(p1[0])} ${f(p1[1])} Q${f(c[0])} ${f(c[1])} ${f(p2[0])} ${f(p2[1])} `;
+    }
+    return `<path d="${d}"/><path d="${pet.trim()}"/>`;
+  };
+  const spots = [[208, 20, "rose"], [236, 12, "f"], [182, 11, "f"], [334, 15, "f"], [14, 18, "rose"], [40, 10, "f"]];
+  spots.forEach(([a, r, k], i) => {
+    const [x, y] = P(a, R + jit(3));
+    // 꽃 뒤로 잎 2장 (꽃다발 느낌)
+    [-1, 1].forEach(sd => { const ang = rad(a + 90 * sd) + rad(a); out.push(leaf(x + (r * .9) * Math.cos(rad(a + sd * 70)), y + (r * .9) * Math.sin(rad(a + sd * 70)), rad(a + sd * 70), r * 1.3)); });
+    out.push(k === "rose" && flowerStyle !== "simple" ? rose(x, y, r) : flower(x, y, r, rnd() * Math.PI));
+  });
+  // 봉오리와 열매
+  [[250, 1], [300, -1], [140, 1], [60, -1]].forEach(([a, sd]) => {
+    const [x, y] = P(a, R + sd * 10);
+    const ang = rad(a) + (sd > 0 ? 0 : Math.PI);
+    const tip = [x + 9 * Math.cos(ang), y + 9 * Math.sin(ang)];
+    out.push(`<path d="M${f(x)} ${f(y)} Q${f(x + 6 * Math.cos(ang + 1))} ${f(y + 6 * Math.sin(ang + 1))} ${f(tip[0])} ${f(tip[1])} Q${f(x + 6 * Math.cos(ang - 1))} ${f(y + 6 * Math.sin(ang - 1))} ${f(x)} ${f(y)}"/>`);
+  });
+  [[160, 0], [276, 6], [110, -6], [356, -8]].forEach(([a, off]) => {
+    const [x, y] = P(a, R + off);
+    for (let k = 0; k < 3; k++) out.push(`<circle cx="${f(x + jit(6))}" cy="${f(y + jit(6))}" r="2"/>`);
+  });
+  // 리본 (아래쪽 틈)
+  const [bx, by] = P(90, R + 2);
+  out.push(`<path d="M${f(bx)} ${f(by)} C${f(bx - 30)} ${f(by - 22)} ${f(bx - 36)} ${f(by + 12)} ${f(bx)} ${f(by)} C${f(bx + 36)} ${f(by + 12)} ${f(bx + 30)} ${f(by - 22)} ${f(bx)} ${f(by)}"/>`,
+           `<circle cx="${f(bx)}" cy="${f(by)}" r="4"/>`,
+           `<path d="M${f(bx - 2)} ${f(by + 4)} C${f(bx - 6)} ${f(by + 14)} ${f(bx - 18)} ${f(by + 16)} ${f(bx - 20)} ${f(by + 30)}"/>`,
+           `<path d="M${f(bx + 2)} ${f(by + 4)} C${f(bx + 8)} ${f(by + 12)} ${f(bx + 18)} ${f(by + 18)} ${f(bx + 22)} ${f(by + 28)}"/>`);
+  // 바깥 반짝임
+  const spark = (x, y, k) => `<path d="M${x} ${y - k} Q${x} ${y} ${x + k} ${y} Q${x} ${y} ${x} ${y + k} Q${x} ${y} ${x - k} ${y} Q${x} ${y} ${x} ${y - k} Z"/>`;
+  out.push(spark(cx - R - 14, cy - R + 4, 7), spark(cx + R + 10, cy - R + 18, 6), spark(cx + R + 4, cy + R - 4, 8), spark(cx - R + 2, cy + R + 2, 5));
+  return out.join("\n");
+}
+
+/* ---------- 리스: 앱이 직접 그리는 꽃 화관 ---------- */
+const WREATH_META = {
+  title: "나의 꽃 리스",
+  symbols: [
+    { name: "꽃", meaning: "저마다 다른 때에 피어나는 꽃처럼, 나도 나만의 속도로 피어난다는 뜻이에요." },
+    { name: "잎", meaning: "꽃을 받쳐 주는 잎처럼 곁에서 힘이 되어 주는 마음이에요." },
+    { name: "리본", meaning: "소중한 마음을 묶어 선물한다는 의미예요." }
+  ],
+  tip: "덩굴은 끊지 말고 길게 이어서 긋고, 잎은 줄기 쪽에서 끝을 향해 짧게 두 번에 나눠 그으면 모양이 예뻐요."
+};
+function wreathOpts() { return { flowerStyle: $("wFlower").value, density: parseFloat($("wLeaf").value) }; }
+function wreathArt(seed) {
+  const o = wreathOpts();
+  return parseSvg(`<svg xmlns="${NS}" viewBox="0 0 300 300">${makeWreath({ cx: 150, cy: 150, R: 98, seed, flowerStyle: o.flowerStyle, density: o.density })}</svg>`);
+}
+function newWreathDesign(meta) {
+  const seed = Math.floor(Math.random() * 1e9);
+  return Object.assign({}, WREATH_META, meta || {}, { layout: "wreath", seed, procedural: true }, wreathArt(seed));
+}
+function refreshWreath() {
+  const d = state.design;
+  if (!d || !d.procedural) return;
+  Object.assign(d, wreathArt(d.seed));
+  render(); drawHistory();
 }
 
 /* ---------- 서버(Apps Script)에 보낼 내용 ---------- */
@@ -660,7 +813,7 @@ function buildPayload() {
     mood: document.querySelector('input[name=mood]:checked').value,
     level: document.querySelector('input[name=level]:checked').value,
     fine: $("fine").checked,
-    specs: (l === "auto" ? ["below", "calli", "grid", "arc", "wreath"] : [l]).map(specFor)
+    specs: (l === "auto" ? ["below", "calli", "grid", "arc"] : [l]).map(specFor)
   };
 }
 
@@ -697,7 +850,57 @@ const ERR = {
   network: "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요."
 };
 
+async function generateWreath() {
+  const hadPhrase = !!curPhrase();
+  if (hadPhrase) {
+    const d = newWreathDesign({ input: { dream: $("dream").value.trim(), words: $("words").value.trim(), symbols: $("symbols").value.trim(), phrase: curPhrase() } });
+    setDesign(d); addHistory(d); updateLayoutHint();
+    setStatus("리스 완성 · 다시 그리기를 누르면 잎과 꽃 배치가 바뀌어요");
+    $("go").textContent = "다시 그리기";
+    return;
+  }
+  // 문구가 비었으면 AI에게 문구와 상징 설명만 받기
+  if (!API_URL) { aiNote("문구를 직접 적거나, 선생님이 API_URL을 넣으면 AI가 문구를 지어 줘요.", true); return; }
+  if (!$("classCode").value.trim()) { $("classCode").focus(); setStatus("문구를 AI에게 받으려면 수업 코드를 적어 주세요. 문구를 직접 적으면 코드 없이 바로 그려져요."); return; }
+  const dream = $("dream").value.trim();
+  if (!dream) { $("dream").focus(); setStatus("꿈이나 되고 싶은 모습을 먼저 적어 주세요."); return; }
+  try { localStorage.setItem("dl_code", $("classCode").value.trim()); } catch (_) {}
+  ctl = new AbortController();
+  $("go").disabled = true; $("stop").hidden = false; aiNote("");
+  setStatus("AI가 문구를 짓는 중…", true);
+  try {
+    let j;
+    try {
+      const p = buildPayload(); p.mode = "text"; p.layout = "wreath"; p.specs = [];
+      const r = await fetch(API_URL, { method: "POST", body: JSON.stringify(p), signal: ctl.signal });
+      j = await r.json();
+    } catch (e) {
+      if (e && e.name === "AbortError") throw { code: "cancelled" };
+      throw { code: "network" };
+    }
+    if (!j.ok) throw { code: j.error };
+    const meta = parseReply(j.text);
+    if (meta.phrase) $("phrase").value = meta.phrase;
+    const keep = {};
+    if (meta.title) keep.title = meta.title;
+    if (meta.symbols.length) keep.symbols = meta.symbols;
+    if (meta.tip) keep.tip = meta.tip;
+    keep.input = { dream, words: $("words").value.trim(), symbols: $("symbols").value.trim(), phrase: curPhrase() };
+    const d = newWreathDesign(keep);
+    setDesign(d); addHistory(d); updateLayoutHint();
+    setStatus("리스 완성 · 문구는 AI가 지었어요, 고쳐도 돼요");
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "cancelled") setStatus("멈췄어요.");
+    else { setStatus(""); aiNote(ERR[code] || "문구를 받지 못했어요. 문구를 직접 적으면 바로 그려져요.", true); }
+  } finally {
+    $("stop").hidden = true; $("go").disabled = false;
+    $("go").textContent = state.history.length ? "다시 그리기" : "도안 만들기";
+  }
+}
+
 async function generate() {
+  if (curLayout() === "wreath") return generateWreath();
   if (!API_URL) { aiNote("선생님: index.html 위쪽의 API_URL에 Apps Script 웹앱 주소를 넣어 주세요.", true); return; }
   if (!$("classCode").value.trim()) { $("classCode").focus(); setStatus("수업 코드를 먼저 적어 주세요."); return; }
   const dream = $("dream").value.trim();
@@ -725,7 +928,7 @@ async function generate() {
     if (!hadPhrase && meta.phrase) $("phrase").value = meta.phrase;
     const layout = chosen === "auto" ? (meta.layout || "below") : chosen;
     const d = Object.assign(meta, parsed, { layout, svg: svgStr,
-      input: { dream, words: $("words").value.trim(), symbols: $("symbols").value.trim(), phrase: curPhrase(), sub: curSub() } });
+      input: { dream, words: $("words").value.trim(), symbols: $("symbols").value.trim(), phrase: curPhrase() } });
     setDesign(d); addHistory(d);
     if (chosen === "auto") document.getElementById("ly-" + layout).checked = true;
     updateLayoutHint();
@@ -874,7 +1077,8 @@ function printActual() {
 $("form").addEventListener("submit", e => { e.preventDefault(); generate(); });
 $("stop").onclick = () => ctl && ctl.abort();
 document.querySelectorAll("input[name=layout]").forEach(r => r.addEventListener("change", updateLayoutHint));
-["phrase", "sub"].forEach(id => $(id).addEventListener("input", render));
+$("phrase").addEventListener("input", render);
+["wFlower", "wLeaf"].forEach(id => $(id).addEventListener("change", refreshWreath));
 document.querySelectorAll("input[name=font]").forEach(r => r.addEventListener("change", render));
 $("plate").addEventListener("change", () => { render(); drawHistory(); });
 $("mirror").addEventListener("change", e => { state.mirror = e.target.checked; render(); });
